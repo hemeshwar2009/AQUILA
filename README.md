@@ -40,3 +40,30 @@ then open http://localhost:8000
 - Historical disaster figures (2004 Tsunami, 2015 Floods, Vardah, 2019 Water
   Crisis, Mandous, Michaung) are approximate, compiled from public reporting
   for demo calibration.
+
+## Security notes — read before adding a backend
+
+This prototype runs entirely in the browser with no server, so all data already
+belongs to whoever opens the page. The items below are **safe as a demo** and
+become **real vulnerabilities the moment a shared backend exists**, because each
+one trusts the client.
+
+- **The admin passcode is not authentication.** `aquila2026` is hardcoded in
+  `index.html` and printed on the login screen. The check is client-side only —
+  calling `show("admin")` from devtools skips it. Any real deployment needs
+  server-side auth; this check must not survive.
+
+- **Ownership filtering happens in the browser.** Citizens see only their own
+  reports and notifications because the client filters on `owner`. With a server
+  that sends every record, this hides other people's data rather than protecting
+  it. Filtering has to move server-side, or it is a data leak.
+
+- **Escape anything a reporter typed.** Reporter-supplied `name`, `phone` and
+  `desc` are untrusted. Use the `esc()` helper for every such value interpolated
+  into `innerHTML`; a name like `<img src=x onerror=...>` otherwise executes in
+  the admin's session. This bug was present and has been fixed — keep new render
+  code consistent with it.
+
+Already handled: phone is validated to 10 digits, the people count is coerced to
+a number, and zone/type/severity come from fixed `<select>` options. The app
+makes no network calls and uses no `eval`, `document.write` or similar sinks.
