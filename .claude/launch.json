@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "aquila", "runtimeExecutable": "npx", "runtimeArgs": ["-y", "http-server@14.1.1", "-p", "8000", "-c-1"], "port": 8000 }
+  ]
+}
