@@ -790,6 +790,7 @@ select option{background:#061a2c !important;}
       <div class="sn-sec">Records</div>
       <button class="sn-item" data-scope="admin" data-page="register" onclick="showPage('admin','register')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Complaints Register</span><em class="sn-badge" id="sb-register"></em></button>
       <button class="sn-item" data-scope="admin" data-page="audit" onclick="showPage('admin','audit')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span>Audit Log</span><em class="sn-badge" id="sb-audit"></em></button>
+      <button class="sn-item" data-scope="admin" data-page="officers" onclick="showPage('admin','officers')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M19 8v6M16 11h6"/></svg><span>Officers</span><em class="sn-badge" id="sb-officers"></em></button>
       <div class="sn-sec">Insights</div>
       <button class="sn-item" data-scope="admin" data-page="analytics" onclick="showPage('admin','analytics')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Analytics</span></button>
       <button class="sn-item" data-scope="admin" data-page="history" onclick="showPage('admin','history')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><path d="M3 4v5h5"/></svg><span>Disaster Datasets</span></button>
@@ -888,6 +889,34 @@ select option{background:#061a2c !important;}
       </div>
     </div>
 
+    <!-- OFFICERS TAB -->
+    <div class="tabpane apage hidden" id="tab-officers"><div class="page-narrow" style="max-width:1000px;">
+      <div class="card c-teal" style="margin-bottom:18px;">
+        <h2>➕ Invite an officer</h2>
+        <div class="cap">Only a signed-in admin can add admins. The new officer gets a one-time link, sets their own password, and nobody else ever sees it.</div>
+        <div class="form-grid">
+          <div><label>Full name</label><input id="invName" placeholder="e.g. R. Kumar" maxlength="40"></div>
+          <div><label>Email</label><input id="invEmail" type="email" placeholder="name@aquila.demo" maxlength="80" onkeydown="if(event.key==='Enter')inviteOfficer()"></div>
+          <div class="full"><button class="btn" onclick="inviteOfficer()">✉ Create invite link</button></div>
+        </div>
+        <div id="invResult" class="okbox hidden" style="margin-top:14px;"></div>
+      </div>
+      <div class="card c-blue">
+        <h2>👮 Officers with admin access</h2>
+        <div class="cap">Disable an account to sign that officer out immediately; it can be re-enabled later.</div>
+        <div class="tbl-scroll">
+          <table style="min-width:720px;">
+            <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Added</th><th></th></tr></thead>
+            <tbody id="officersBody"></tbody>
+          </table>
+        </div>
+        <div class="warnbox" id="officersNote" style="margin-top:14px; font-size:12.5px;">
+          <b>Demo limitation:</b> there is no server yet, so officer accounts and invite links are stored in this browser only.
+          Open the invite link in this same browser to accept it. A real deployment needs server-side accounts (see README).
+        </div>
+      </div>
+    </div></div>
+
     <!-- HISTORY TAB -->
     <div class="tabpane apage hidden" id="tab-history">
       <div class="card c-amber" style="margin-bottom:18px;">
@@ -907,6 +936,13 @@ select option{background:#061a2c !important;}
 
 <div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeIncident()">
   <div class="modal" id="modal"></div>
+</div>
+<!-- accept an officer invite (opened from ?invite=… links) -->
+<div class="modal-bg" id="inviteBg">
+  <div class="modal" style="width:460px;">
+    <div class="m-head"><h3>🛡️ Set up your officer account</h3><button class="m-x" onclick="closeInviteAccept()" title="Close">✕</button></div>
+    <div class="m-body" id="inviteBody"></div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1162,6 +1198,7 @@ function notifyStatusChange(c, prev){
 
 /* cross-tab live sync: open Citizen in one tab, Admin in another */
 window.addEventListener("storage", e=>{
+  if(e.key===KEY_O){ loadOfficers(); enforceAdminAccess(); refreshAll(); return; }
   if([KEY_C,KEY_N,KEY_A].includes(e.key)){
     const before = myNotifs().filter(n=>!n.read).length;
     loadState(); loadNotifs(); loadAudit(); refreshAll();
@@ -1189,21 +1226,305 @@ function enterCitizen(){
 }
 /* admin accounts: only a SHA-256 of "email:password" is stored (client-side demo, not real auth) */
 const ADMIN_ACCOUNTS = {
-  "admin@aquila.demo": {name:"Duty Officer (admin@aquila.demo)", hash:"c58e054281d82d5ae5700d69ab7d709f26be38f66cc0ad319d94c12e76ed6adf"},
+  "admin@aquila.demo": {name:"Duty Officer (admin@aquila.demo)", hash:"6e6b3b2dec8a4b73e72ac1ee0775bffcc23cb6efc668faa3ebf589bc594e8e43"},
 };
 async function sha256Hex(s){
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
 }
+/* =================================================================
+   SUPABASE ADMIN AUTH
+   Fill in your project's URL and anon (public) key to switch admin sign-in
+   to Supabase. Leave them empty to use the built-in demo login above.
+   The anon key is meant to be public; NEVER put the service_role key here.
+   ================================================================= */
+const SUPABASE_URL = "https://sieruxnpbvwwsbhlclqk.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZXJ1eG5wYnZ3d3NiaGxjbHFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ0NDg0NDAsImV4cCI6MjExMDAyNDQ0MH0.yH7--KUHOZ7eiy-mQhyWKeWE_DMnXHlht-G2Txpyx_M";
+const SB_ON = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+// read the invite/recovery result from the URL before the Supabase client consumes it
+const SB_LINK = (()=>{ const h = new URLSearchParams(location.hash.slice(1)); return {type:h.get("type"), error:h.get("error_description")}; })();
+let sb = null, sbOfficers = [], currentAdminId = null;
+const sbReady = !SB_ON ? Promise.resolve(null) : new Promise((resolve)=>{
+  const s = document.createElement("script");
+  s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js";
+  s.onload = ()=>{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:true, detectSessionInUrl:true, flowType:"implicit"}}); resolve(sb); };
+  s.onerror = ()=>{ toast("Could not reach the sign-in service. Check your connection.", true); resolve(null); };
+  document.head.appendChild(s);
+});
+async function sbEnterAdmin(email, password){
+  const client = await sbReady; if(!client) return;
+  const {data, error} = await client.auth.signInWithPassword({email, password});
+  if(error || !data?.user){ toast("Incorrect email or password.", true); return; }
+  const {data:row} = await client.from("admins").select("name, disabled, accepted_at").eq("user_id", data.user.id).maybeSingle();
+  if(!row || row.disabled || !row.accepted_at){
+    await client.auth.signOut({scope:"local"});
+    toast(row?.disabled? "This account has been disabled. Contact an admin." : "This account doesn't have admin access.", true); return;
+  }
+  return {name:row.name, id:data.user.id};
+}
+async function sbLoadOfficers(){
+  if(!sb || !currentAdminId) return;
+  const {data, error} = await sb.from("admins").select("*").order("created_at");
+  if(!error){ sbOfficers = data||[]; renderOfficers(); renderNavBadges(); }
+}
+async function sbInviteOfficer(name, email){
+  const {data, error} = await sb.functions.invoke("invite-officer", {body:{name, email, redirectTo: location.origin + location.pathname}});
+  if(error){
+    let msg = "Could not send the invite.";
+    try{ msg = (await error.context.json()).error || msg; }catch(e){}
+    toast(msg, true); return false;
+  }
+  return !!data?.ok;
+}
+async function sbSetDisabled(id, disabled){
+  const o = sbOfficers.find(x=>x.user_id===id); if(!o) return;
+  const {error} = await sb.from("admins").update({disabled}).eq("user_id", id);
+  if(error){ toast("Could not update that officer.", true); return; }
+  log(currentAdmin, disabled? "Officer disabled" : "Officer re-enabled", "—", `${o.name} <${o.email}>`);
+  toast(`${o.name} ${disabled? "disabled":"re-enabled"}.`); sbLoadOfficers();
+}
+async function sbRemove(id){
+  const o = sbOfficers.find(x=>x.user_id===id); if(!o) return;
+  const pending = !o.accepted_at;
+  if(!confirm(pending? `Revoke the invite for ${o.name} (${o.email})?` : `Remove admin access for ${o.name} (${o.email})? They would need a new invite.`)) return;
+  const {error} = await sb.from("admins").delete().eq("user_id", id);
+  if(error){ toast("Could not remove that officer.", true); return; }
+  log(currentAdmin, pending? "Invite revoked" : "Officer removed", "—", `${o.name} <${o.email}>`);
+  toast(pending? "Invite revoked." : `${o.name} removed.`); sbLoadOfficers();
+}
+/* the invite email link brings the officer back here signed in; they choose a password */
+async function sbCheckInviteLink(){
+  if(SB_LINK.error){ toast("This invite link is invalid or has expired. Ask an admin for a new one.", true); clearInviteParam(); return; }
+  if(SB_LINK.type!=="invite" && SB_LINK.type!=="recovery") return;
+  const client = await sbReady; if(!client) return;
+  const {data:{session}} = await client.auth.getSession();
+  if(!session){ toast("This invite link is invalid or has expired.", true); clearInviteParam(); return; }
+  const u = session.user, isInvite = SB_LINK.type==="invite";
+  document.getElementById("inviteBody").innerHTML = `
+    <div style="font-size:13px; color:var(--ink2);">${isInvite? "You've been invited to the Aquila command center. Choose a password to finish setting up." : "Choose a new password for your admin account."}</div>
+    <div><label>Email</label><input value="${esc(u.email)}" readonly style="opacity:.75"></div>
+    ${isInvite? `<div><label>Full name</label><input id="accName" value="${esc(u.user_metadata?.name||"")}" maxlength="40"></div>` : ""}
+    <div><label>Choose a password</label><input id="accPass" type="password" autocomplete="new-password" placeholder="At least 8 characters, with a letter and a number"></div>
+    <div><label>Confirm password</label><input id="accPass2" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')acceptInvite()"></div>
+    <button class="btn" style="justify-content:center;" onclick="acceptInvite()">${isInvite? "Create my account" : "Save new password"}</button>`;
+  pendingInvite = "supabase";
+  document.getElementById("inviteBg").classList.add("open");
+  setTimeout(()=>document.getElementById("accPass").focus(), 50);
+}
+async function sbAcceptInvite(){
+  const nameEl = document.getElementById("accName"), name = nameEl? nameEl.value.trim() : null;
+  const p1 = document.getElementById("accPass").value, p2 = document.getElementById("accPass2").value;
+  if(nameEl && name.length<2){ toast("Enter your full name.", true); return; }
+  if(p1.length<8 || !/[A-Za-z]/.test(p1) || !/\d/.test(p1)){ toast("Password needs at least 8 characters, including a letter and a number.", true); return; }
+  if(p1!==p2){ toast("The passwords don't match.", true); return; }
+  const {data:{user}, error} = await sb.auth.updateUser({password:p1});
+  if(error || !user){ toast(error?.message || "Could not save your password.", true); return; }
+  const {error:rpcErr} = await sb.rpc("mark_invite_accepted", {p_name: name});
+  if(rpcErr){ toast("Password saved, but your admin access couldn't be confirmed. Contact an admin.", true); }
+  else log(name || user.email, SB_LINK.type==="invite"? "Officer account created" : "Password reset", "—", user.email);
+  await sb.auth.signOut({scope:"local"});
+  closeInviteAccept();
+  document.getElementById("adminEmail").value = user.email;
+  document.getElementById("adminPop").classList.add("open");
+  setTimeout(()=>document.getElementById("adminPass").focus(), 50);
+  toast("Password saved. Sign in to continue.");
+}
+/* signed-in officers are re-checked every 30 s, so disabling someone signs them out */
+setInterval(async ()=>{
+  if(!SB_ON || !sb || !currentAdminId) return;
+  const {data:row, error} = await sb.from("admins").select("disabled, accepted_at").eq("user_id", currentAdminId).maybeSingle();
+  if(!error && (!row || row.disabled)){ logout(); toast("Your admin access was removed or disabled.", true); }
+}, 30000);
+
+/* ---------- officer accounts created by invite (stored in this browser; demo only) ---------- */
+const KEY_O = "aquila_officers_v1";
+const INVITE_HOURS = 48;
+let officers = {accounts:{}, invites:{}};
+let currentAdminEmail = null;
+function loadOfficers(){
+  try{ const r = localStorage.getItem(KEY_O); if(r){ const o = JSON.parse(r); officers = {accounts:o.accounts||{}, invites:o.invites||{}}; } }catch(e){}
+  const now = Date.now();
+  Object.entries(officers.invites).forEach(([t,i])=>{ if(i.expires < now) delete officers.invites[t]; });
+}
+function saveOfficers(){ try{ localStorage.setItem(KEY_O, JSON.stringify(officers)); }catch(e){} }
+function randomHex(bytes){ return [...crypto.getRandomValues(new Uint8Array(bytes))].map(b=>b.toString(16).padStart(2,"0")).join(""); }
+const officerHash = (salt, email, pw)=> sha256Hex(salt+":"+email+":"+pw);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function emailTaken(email){ return !!ADMIN_ACCOUNTS[email] || !!officers.accounts[email]; }
+function inviteLink(token){ return location.origin + location.pathname + "?invite=" + token; }
+
+let inviting = false;
+async function inviteOfficer(){
+  const name = document.getElementById("invName").value.trim();
+  const email = document.getElementById("invEmail").value.trim().toLowerCase();
+  if(name.length<2){ toast("Enter the officer's full name.", true); return; }
+  if(!EMAIL_RE.test(email)){ toast("Enter a valid email address.", true); return; }
+  if(SB_ON){
+    if(inviting) return; inviting = true;
+    try{
+      if(!(await sbInviteOfficer(name, email))) return;
+      log(currentAdmin, "Officer invited", "—", `${name} <${email}> · invite email sent by Supabase`);
+      document.getElementById("invName").value = ""; document.getElementById("invEmail").value = "";
+      const box = document.getElementById("invResult"); box.classList.remove("hidden");
+      box.innerHTML = `✅ Invite email sent to <b>${esc(name)}</b> (${esc(email)}). They'll get a link to choose their own password.`;
+      sbLoadOfficers(); refreshAll();
+    } finally { inviting = false; }
+    return;
+  }
+  if(emailTaken(email)){ toast("That email already has an admin account.", true); return; }
+  Object.entries(officers.invites).forEach(([t,i])=>{ if(i.email===email) delete officers.invites[t]; }); // newest invite wins
+  const token = randomHex(16);
+  officers.invites[token] = {email, name, invitedBy:currentAdmin, ts:Date.now(), expires:Date.now()+INVITE_HOURS*3600e3};
+  saveOfficers();
+  log(currentAdmin, "Officer invited", "—", `${name} <${email}> · link valid ${INVITE_HOURS} h`);
+  document.getElementById("invName").value = ""; document.getElementById("invEmail").value = "";
+  const box = document.getElementById("invResult");
+  box.classList.remove("hidden");
+  box.innerHTML = `✅ Invite created for <b>${esc(name)}</b> (${esc(email)}). Send them this one-time link (valid ${INVITE_HOURS} hours):
+    <div class="m-actions"><input type="text" readonly value="${esc(inviteLink(token))}" style="flex:1; min-width:240px;" onclick="this.select()">
+    <button class="btn sm" onclick="copyInvite('${token}')">Copy link</button></div>`;
+  refreshAll();
+}
+async function copyInvite(token){
+  const link = inviteLink(token);
+  try{ await navigator.clipboard.writeText(link); toast("Invite link copied."); }
+  catch(e){ prompt("Copy this invite link:", link); }
+}
+function revokeInvite(token){
+  const i = officers.invites[token]; if(!i) return;
+  delete officers.invites[token]; saveOfficers();
+  log(currentAdmin, "Invite revoked", "—", `${i.name} <${i.email}>`);
+  refreshAll(); toast("Invite revoked.");
+}
+function setOfficerDisabled(email, disabled){
+  const a = officers.accounts[email]; if(!a) return;
+  if(email===currentAdminEmail){ toast("You can't disable your own account.", true); return; }
+  a.disabled = disabled; saveOfficers();
+  log(currentAdmin, disabled? "Officer disabled" : "Officer re-enabled", "—", `${a.name} <${email}>`);
+  refreshAll(); toast(`${a.name} ${disabled? "disabled":"re-enabled"}.`);
+}
+function removeOfficer(email){
+  const a = officers.accounts[email]; if(!a) return;
+  if(email===currentAdminEmail){ toast("You can't remove your own account.", true); return; }
+  if(!confirm(`Remove admin access for ${a.name} (${email})? This cannot be undone; they would need a new invite.`)) return;
+  delete officers.accounts[email]; saveOfficers();
+  log(currentAdmin, "Officer removed", "—", `${a.name} <${email}>`);
+  refreshAll(); toast(`${a.name} removed.`);
+}
+function renderOfficers(){
+  const body = document.getElementById("officersBody"); if(!body) return;
+  const ago = t=>{ const h = (Date.now()-t)/3600e3; return h<1? "just now" : h<24? Math.round(h)+" h ago" : new Date(t).toLocaleDateString("en-IN"); };
+  const you = e=> e===currentAdminEmail? ` <span class="flag" style="color:#4ad2a0; border-color:rgba(25,158,112,.4); background:rgba(25,158,112,.12);">you</span>` : "";
+  const note = document.getElementById("officersNote");
+  if(SB_ON){
+    if(note) note.innerHTML = `<b>Supabase:</b> passwords are checked by Supabase Auth and never stored in this page. Invited officers get an email with a one-time link to choose their password. Disabled officers are signed out within 30 seconds.`;
+    body.innerHTML = sbOfficers.map(o=>{
+      const st = o.disabled? ["st-pending","Disabled"] : o.accepted_at? ["st-accepted","Active"] : ["st-dispatched","Invite sent"];
+      const self = o.user_id===currentAdminId;
+      return `<tr>
+        <td><b>${esc(o.name)}</b>${self? you(currentAdminEmail):""}</td><td>${esc(o.email)}</td>
+        <td><span class="badge-st ${st[0]}">${st[1]}</span></td>
+        <td style="color:var(--muted)">${ago(new Date(o.created_at).getTime())} · by ${esc(o.created_by||"—")}</td>
+        <td style="white-space:nowrap;">${self? "" : (o.accepted_at? `
+          <button class="btn ghost sm" onclick="sbSetDisabled('${esc(o.user_id)}', ${!o.disabled})">${o.disabled? "Enable":"Disable"}</button>` : "") + `
+          <button class="btn ghost sm" onclick="sbRemove('${esc(o.user_id)}')">${o.accepted_at? "Remove":"Revoke"}</button>`}</td></tr>`;
+    }).join("") || `<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:20px;">Loading officers…</td></tr>`;
+    return;
+  }
+  const rows = [];
+  Object.entries(ADMIN_ACCOUNTS).forEach(([email,a])=> rows.push(`<tr>
+    <td><b>${esc(a.name)}</b>${you(email)}</td><td>${esc(email)}</td>
+    <td><span class="badge-st st-resolved">Built-in</span></td><td style="color:var(--muted)">Set in code</td>
+    <td style="color:var(--muted); font-size:12px;">Change in index.html</td></tr>`));
+  Object.entries(officers.accounts).forEach(([email,a])=> rows.push(`<tr>
+    <td><b>${esc(a.name)}</b>${you(email)}</td><td>${esc(email)}</td>
+    <td><span class="badge-st ${a.disabled? "st-pending":"st-accepted"}">${a.disabled? "Disabled":"Active"}</span></td>
+    <td style="color:var(--muted)">${ago(a.createdTs)} · by ${esc(a.createdBy||"—")}</td>
+    <td style="white-space:nowrap;">${email===currentAdminEmail? "" : `
+      <button class="btn ghost sm" onclick="setOfficerDisabled('${esc(email)}', ${!a.disabled})">${a.disabled? "Enable":"Disable"}</button>
+      <button class="btn ghost sm" onclick="removeOfficer('${esc(email)}')">Remove</button>`}</td></tr>`));
+  Object.entries(officers.invites).forEach(([t,i])=> rows.push(`<tr>
+    <td><b>${esc(i.name)}</b></td><td>${esc(i.email)}</td>
+    <td><span class="badge-st st-dispatched">Invite pending</span></td>
+    <td style="color:var(--muted)">expires in ${Math.max(1, Math.round((i.expires-Date.now())/3600e3))} h · by ${esc(i.invitedBy||"—")}</td>
+    <td style="white-space:nowrap;"><button class="btn ghost sm" onclick="copyInvite('${t}')">Copy link</button>
+      <button class="btn ghost sm" onclick="revokeInvite('${t}')">Revoke</button></td></tr>`));
+  body.innerHTML = rows.join("");
+}
+
+/* accepting an invite: the officer opens ?invite=<token> and sets their own password */
+let pendingInvite = null;
+function checkInviteLink(){
+  if(SB_ON) return sbCheckInviteLink();
+  const token = new URLSearchParams(location.search).get("invite"); if(!token) return;
+  const inv = officers.invites[token];
+  if(!inv || inv.expires < Date.now() || emailTaken(inv.email)){
+    clearInviteParam(); toast("This invite link is invalid, already used, or has expired.", true); return;
+  }
+  pendingInvite = token;
+  document.getElementById("inviteBody").innerHTML = `
+    <div style="font-size:13px; color:var(--ink2);">You were invited by <b>${esc(inv.invitedBy||"an admin")}</b> to join the Aquila command center.</div>
+    <div><label>Email</label><input value="${esc(inv.email)}" readonly style="opacity:.75"></div>
+    <div><label>Full name</label><input id="accName" value="${esc(inv.name)}" maxlength="40"></div>
+    <div><label>Choose a password</label><input id="accPass" type="password" autocomplete="new-password" placeholder="At least 8 characters, with a letter and a number"></div>
+    <div><label>Confirm password</label><input id="accPass2" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')acceptInvite()"></div>
+    <button class="btn" style="justify-content:center;" onclick="acceptInvite()">Create my account</button>`;
+  document.getElementById("inviteBg").classList.add("open");
+  setTimeout(()=>document.getElementById("accPass").focus(), 50);
+}
+function clearInviteParam(){ history.replaceState(null, "", location.pathname); }
+function closeInviteAccept(){ if(pendingInvite==="supabase" && sb) sb.auth.signOut({scope:"local"}); pendingInvite = null; document.getElementById("inviteBg").classList.remove("open"); clearInviteParam(); }
+async function acceptInvite(){
+  if(pendingInvite==="supabase") return sbAcceptInvite();
+  loadOfficers();
+  const inv = pendingInvite && officers.invites[pendingInvite];
+  if(!inv || emailTaken(inv.email)){ closeInviteAccept(); toast("This invite is no longer valid.", true); return; }
+  const name = document.getElementById("accName").value.trim();
+  const p1 = document.getElementById("accPass").value, p2 = document.getElementById("accPass2").value;
+  if(name.length<2){ toast("Enter your full name.", true); return; }
+  if(p1.length<8 || !/[A-Za-z]/.test(p1) || !/\d/.test(p1)){ toast("Password needs at least 8 characters, including a letter and a number.", true); return; }
+  if(p1!==p2){ toast("The passwords don't match.", true); return; }
+  const salt = randomHex(16);
+  officers.accounts[inv.email] = {name, salt, hash: await officerHash(salt, inv.email, p1), createdBy:inv.invitedBy, createdTs:Date.now(), disabled:false};
+  delete officers.invites[pendingInvite]; saveOfficers();
+  log(name, "Officer account created", "—", `${inv.email} · invited by ${inv.invitedBy||"—"}`);
+  closeInviteAccept();
+  document.getElementById("adminEmail").value = inv.email;
+  document.getElementById("adminPop").classList.add("open");
+  setTimeout(()=>document.getElementById("adminPass").focus(), 50);
+  toast("Account created. Sign in with your new password.");
+}
+
+/* a disabled or removed officer is signed out straight away */
+function enforceAdminAccess(){
+  if(SB_ON || !currentAdmin || !currentAdminEmail || ADMIN_ACCOUNTS[currentAdminEmail]) return;
+  const a = officers.accounts[currentAdminEmail];
+  if(!a || a.disabled){ currentAdmin = null; logout(); toast("Your admin access was removed or disabled.", true); }
+}
+
 async function enterAdmin(){
   const email = document.getElementById("adminEmail").value.trim().toLowerCase();
   const p = document.getElementById("adminPass").value;
-  const acct = ADMIN_ACCOUNTS[email];
-  let ok = false;
-  try{ ok = !!acct && (await sha256Hex(email+":"+p)) === acct.hash; }
-  catch(e){ toast("Sign-in needs a secure page (https or localhost).", true); return; }
-  if(!ok){ toast("Incorrect email or password.", true); return; }
-  currentAdmin = acct.name;
+  if(SB_ON){
+    if(!email || !p){ toast("Enter your email and password.", true); return; }
+    const who = await sbEnterAdmin(email, p); if(!who) return;
+    currentAdmin = who.name; currentAdminEmail = email; currentAdminId = who.id;
+    document.getElementById("adminPass").value = "";
+    document.getElementById("adminWho").textContent = "👤 " + currentAdmin;
+    log(currentAdmin, "Signed in", "—", "Command center (Supabase)");
+    show("admin"); showPage("admin","map"); refreshAll(); sbLoadOfficers();
+    return;
+  }
+  loadOfficers();
+  const builtin = ADMIN_ACCOUNTS[email], officer = officers.accounts[email];
+  let acct = null;
+  try{
+    if(builtin && (await sha256Hex(email+":"+p)) === builtin.hash) acct = builtin;
+    else if(officer && (await officerHash(officer.salt, email, p)) === officer.hash) acct = officer;
+  }catch(e){ toast("Sign-in needs a secure page (https or localhost).", true); return; }
+  if(!acct){ toast("Incorrect email or password.", true); return; }
+  if(acct.disabled){ toast("This account has been disabled. Contact an admin.", true); return; }
+  currentAdmin = acct.name; currentAdminEmail = email;
   document.getElementById("adminPass").value = "";
   document.getElementById("adminWho").textContent = "👤 " + currentAdmin;
   log(currentAdmin, "Signed in", "—", "Command center");
@@ -1212,7 +1533,9 @@ async function enterAdmin(){
 function logout(){
   document.getElementById("adminPop").classList.remove("open");
   if(currentAdmin && document.getElementById("adminShell").classList.contains("active")) log(currentAdmin, "Signed out", "—", "");
-  currentUser=null; currentAdmin=null; document.getElementById("adminPass").value=""; closeIncident(); show("landing");
+  if(SB_ON && sb && currentAdminId) sb.auth.signOut({scope:"local"});
+  currentUser=null; currentAdmin=null; currentAdminEmail=null; currentAdminId=null; sbOfficers=[]; document.getElementById("adminPass").value=""; closeIncident(); show("landing");
+  const r = document.getElementById("invResult"); if(r){ r.classList.add("hidden"); r.innerHTML = ""; }
 }
 
 /* ---------- Toast ---------- */
@@ -2040,6 +2363,7 @@ function showPage(scope, page){
   const cls = scope==="admin"? ".apage" : ".cpage", pre = scope==="admin"? "tab-" : "cp-";
   document.querySelectorAll(cls).forEach(p=>p.classList.add("hidden"));
   document.getElementById(pre+page).classList.remove("hidden");
+  if(scope==="admin" && page==="officers" && SB_ON) sbLoadOfficers();
   window.scrollTo({top:0, behavior:"smooth"});
 }
 function renderNavBadges(){
@@ -2049,13 +2373,14 @@ function renderNavBadges(){
   set("fleet", `${Object.keys(busyMap()).length}/${FLEET.length}`);
   set("register", complaints.length);
   set("audit", auditLog.length);
+  set("officers", SB_ON? sbOfficers.filter(o=>o.accepted_at && !o.disabled).length || "" : Object.keys(ADMIN_ACCOUNTS).length + Object.keys(officers.accounts).length);
   set("mine", complaints.filter(c=>c.source==="citizen" && (!c.owner || c.owner===currentUser) && c.status!=="Resolved").length);
 }
 
 /* ---------- refresh everything ---------- */
 function refreshAll(){
   setTicker(); renderKPIs(); renderRegister(); renderFleet(); renderQueue(); renderAudit(); renderNavBadges();
-  renderAnalytics(); renderHistory(); renderCitizen(); renderIncidents(); updateAgentTargets(); renderNotifs();
+  renderAnalytics(); renderHistory(); renderCitizen(); renderIncidents(); updateAgentTargets(); renderNotifs(); renderOfficers();
   if(openId && !modalBusy()) renderModal();
 }
 
@@ -2102,6 +2427,7 @@ function logoSVG(uid, size){
 loadAudit();
 loadState();
 loadNotifs();
+loadOfficers();
 initCitizenForm();
 document.getElementById("filterZone").innerHTML = `<option value="">All zones</option>` +
   ZONES.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(z=>`<option value="${z.id}">${z.name}</option>`).join("");
@@ -2109,6 +2435,7 @@ buildMap("citizenMapWrap", false);
 buildMap("adminMapWrap", true);
 refreshAll();
 show("landing");
+checkInviteLink();
 </script>
 </body>
 </html>

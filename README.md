@@ -26,6 +26,44 @@ then open http://localhost:8000
 - **Admin Command Center** — sign in with the admin email and password. They are
   kept in `admin-credentials.local.md` (gitignored, not in the repo); ask the team for them.
 
+## Admin accounts
+
+Admin sign-in has two modes, chosen by two settings near the top of the admin
+code in `index.html` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`):
+
+- **Demo mode** (both empty, the default): the built-in admin above, plus
+  officers invited from **Officers** in the admin sidebar. Invited accounts and
+  invite links live in this browser only, so open an invite link in the same browser.
+- **Supabase mode** (both filled in): passwords are checked by Supabase Auth,
+  the built-in demo admin is switched off, and invited officers get a real email.
+
+### Setting up Supabase
+
+1. Create a project at supabase.com. From **Project Settings → API**, copy the
+   **Project URL** and the **anon public** key into `SUPABASE_URL` and
+   `SUPABASE_ANON_KEY` in `index.html`. The anon key is designed to be public.
+   **Never** put the `service_role` key in `index.html`.
+2. **SQL Editor →** run [`supabase/schema.sql`](supabase/schema.sql). It creates the
+   `admins` table, row-level security policies and two helper functions.
+3. **Authentication → Sign In / Providers → Email:** turn **off** "Allow new users to sign up",
+   so nobody can register themselves. Officers join only by invite.
+4. **Authentication → URL Configuration:** set **Site URL** to where the app is
+   hosted and add the same URL (and `http://localhost:8000` for testing) under
+   **Redirect URLs**, so invite links come back to the app.
+5. **Edge Functions →** deploy [`supabase/functions/invite-officer/index.ts`](supabase/functions/invite-officer/index.ts)
+   as a function named `invite-officer`. It checks that the caller is an active
+   admin, then sends Supabase's invite email. It uses the service-role key that
+   Supabase provides to functions automatically, so the key stays on the server.
+6. **First admin:** Authentication → Users → **Add user** (tick "Auto Confirm
+   User"), then run the "FIRST ADMIN" snippet at the bottom of `schema.sql` with
+   that email.
+
+**How it works:** an admin opens **Officers**, enters a name and email, and
+Supabase emails the officer a one-time link. The link opens the app signed in,
+asks them to choose a password (min. 8 characters, a letter and a number), and
+marks the account active. Admins can disable, re-enable or remove other officers
+(never themselves), and a disabled officer is signed out within 30 seconds.
+
 ## Suggested demo flow
 1. Open the Citizen portal in one browser tab and the Admin center in a second tab.
 2. As a citizen, file: "Rescue needed, chest-deep water, 6 people, Velachery".
@@ -50,11 +88,14 @@ belongs to whoever opens the page. The items below are **safe as a demo** and
 become **real vulnerabilities the moment a shared backend exists**, because each
 one trusts the client.
 
-- **The admin login is not authentication.** Only a SHA-256 hash of
+- **The demo admin login is not authentication.** Only a SHA-256 hash of
   `email:password` is stored in `index.html` (`ADMIN_ACCOUNTS`), but the hash can
   be brute-forced offline and the check is client-side only —
-  calling `show("admin")` from devtools skips it. Any real deployment needs
-  server-side auth; this check must not survive.
+  calling `show("admin")` from devtools skips it. Supabase mode fixes the
+  *password* check (it happens on Supabase's servers), but the command-center
+  data (complaints, audit log) is still kept in the browser, so the admin screens
+  themselves are not yet protected. Moving that data into Supabase tables with
+  row-level security is the next step before real use.
 
 - **Ownership filtering happens in the browser.** Citizens see only their own
   reports and notifications because the client filters on `owner`. With a server
@@ -69,5 +110,7 @@ one trusts the client.
 
 Already handled: phone is validated to 10 digits, the people count is coerced to
 a number, zone/type/depth come from fixed `<select>` options, and severity is computed
-by the system rather than entered by the user. The app
-makes no network calls and uses no `eval`, `document.write` or similar sinks.
+by the system rather than entered by the user. In demo mode the app makes no
+network calls besides Google Fonts; in Supabase mode it also loads supabase-js
+from jsDelivr and talks to your Supabase project. It uses no `eval`,
+`document.write` or similar sinks.
