@@ -1,0 +1,102 @@
+/* =================================================================
+   AREA BROADCASTS — officers send zone-wise updates in the local
+   language; citizens see them on the ticker and the Safety Advisory
+   (Supabase mode shares them live across devices; demo mode is per-browser)
+   ================================================================= */
+let broadcasts = [];   // newest first: {id, zone|"", tpl, texts:{en,ta,hi}, ts, by}
+
+const BCAST_TPL = {
+  flood_evac: {label:"🌊 Flood — move to shelter", t:{
+    en: z=>`${z}: Water is rising. Move to higher ground now. Relief shelter open at the ${z} Corporation school. Do not walk through moving water.`,
+    ta: z=>`${z}: தண்ணீர் உயர்கிறது. உடனே உயரமான இடத்திற்கு செல்லுங்கள். ${z} மாநகராட்சி பள்ளியில் நிவாரண முகாம் திறக்கப்பட்டுள்ளது. ஓடும் தண்ணீரில் நடக்க வேண்டாம்.`,
+    hi: z=>`${z}: पानी बढ़ रहा है। तुरंत ऊँची जगह जाएँ। ${z} निगम स्कूल में राहत शिविर खुला है। बहते पानी में न चलें.`}},
+  heat_adv: {label:"☀️ Heatwave advisory", t:{
+    en: z=>`${z}: Severe heat until 5 pm. Stay indoors 12–4, drink water every hour, check on the elderly. Cooling centre open at the ${z} community hall.`,
+    ta: z=>`${z}: மாலை 5 வரை கடும் வெப்பம். மதியம் 12–4 வெளியே வர வேண்டாம், மணிக்கொருமுறை தண்ணீர் குடியுங்கள், முதியவர்களை கவனியுங்கள். ${z} சமுதாய கூடத்தில் குளிர்சாதன மையம் உள்ளது.`,
+    hi: z=>`${z}: शाम 5 बजे तक भीषण गर्मी। 12–4 घर के अंदर रहें, हर घंटे पानी पिएँ, बुज़ुर्गों का ध्यान रखें। ${z} सामुदायिक भवन में कूलिंग सेंटर खुला है.`}},
+  water_dist: {label:"🚰 Water tanker timing", t:{
+    en: z=>`${z}: Water tanker will reach the main bus stop at 4 pm today. One pot per family; please queue in the shade.`,
+    ta: z=>`${z}: இன்று மாலை 4 மணிக்கு முக்கிய பேருந்து நிறுத்தத்திற்கு தண்ணீர் லாரி வரும். குடும்பத்திற்கு ஒரு குடம்; நிழலில் வரிசையில் நிற்கவும்.`,
+    hi: z=>`${z}: आज शाम 4 बजे मुख्य बस स्टॉप पर पानी का टैंकर पहुँचेगा। प्रति परिवार एक घड़ा; छाया में कतार लगाएँ.`}},
+};
+
+function bcastTexts(tpl, zoneId, custom){
+  const zn = zoneId ? (Z[zoneId]?.name || zoneId) : "All Chennai zones";
+  if(tpl === "custom"){ const c = (custom||"").trim(); return {en:`${zn}: ${c}`, ta:`${zn}: ${c}`, hi:`${zn}: ${c}`}; }
+  const T = BCAST_TPL[tpl]; if(!T) return null;
+  return {en:T.t.en(zn), ta:T.t.ta(zn), hi:T.t.hi(zn)};
+}
+function bcastText(b){ const L = typeof protoLang==="function" ? protoLang() : "en"; return (b.texts && (b.texts[L] || b.texts.en)) || ""; }
+
+/* ---------- storage: Supabase table when available, else this browser ---------- */
+function loadBroadcasts(){
+  if(SB_ON && sb){
+    sb.from("broadcasts").select("*").order("ts",{ascending:false}).limit(20)
+      .then(({data,error})=>{ if(!error && data){ broadcasts = data.map(r=>({id:r.id, zone:r.zone||"", tpl:r.tpl, texts:r.texts, ts:+new Date(r.ts), by:r.by})); paintBroadcasts(); } });
+    try{
+      sb.channel("bcast").on("postgres_changes",{event:"INSERT",schema:"public",table:"broadcasts"},(p)=>{
+        const r = p.new; broadcasts.unshift({id:r.id, zone:r.zone||"", tpl:r.tpl, texts:r.texts, ts:+new Date(r.ts), by:r.by});
+        paintBroadcasts(); toast("📢 " + bcastText(broadcasts[0]).slice(0,80) + "…");
+      }).subscribe();
+    }catch(e){}
+  }else{
+    try{ broadcasts = JSON.parse(localStorage.getItem("aquila_broadcasts_v1")||"[]"); }catch(e){ broadcasts = []; }
+  }
+}
+function saveBroadcastsLocal(){ try{ localStorage.setItem("aquila_broadcasts_v1", JSON.stringify(broadcasts.slice(0,20))); }catch(e){} }
+
+async function sendBroadcast(){
+  const zone = document.getElementById("bcZone").value;
+  const tpl  = document.getElementById("bcTpl").value;
+  const custom = document.getElementById("bcCustom").value;
+  if(tpl==="custom" && !custom.trim()){ toast("Type the custom message first.", true); return; }
+  const texts = bcastTexts(tpl, zone, custom); if(!texts) return;
+  const b = {id:"BC-"+Date.now().toString(36), zone, tpl, texts, ts:Date.now(), by:currentAdmin||"Officer"};
+  if(SB_ON && sb){
+    const {error} = await sb.from("broadcasts").insert({zone:zone||null, tpl, texts, by:b.by});
+    if(error){ toast("Broadcast failed: "+error.message, true); return; }
+    /* the realtime INSERT event adds it to the list */
+  }else{
+    broadcasts.unshift(b); saveBroadcastsLocal();
+  }
+  log(currentAdmin||"Officer", "Area broadcast sent", zone? (Z[zone]?.name||zone) : "All zones", texts.en.slice(0,120));
+  paintBroadcasts();
+  toast(`📢 Broadcast sent to ${zone? Z[zone].name : "all zones"} in 3 languages.`);
+}
+
+/* ---------- admin page ---------- */
+function bcPreview(){
+  const zone = document.getElementById("bcZone")?.value ?? "";
+  const tpl  = document.getElementById("bcTpl")?.value ?? "flood_evac";
+  const custom = document.getElementById("bcCustom")?.value ?? "";
+  document.getElementById("bcCustom").style.display = tpl==="custom" ? "" : "none";
+  const t = bcastTexts(tpl, zone, custom || "…");
+  const host = document.getElementById("bcPreview");
+  if(host && t) host.innerHTML = ["en","ta","hi"].map(L=>`<div class="bc-prev"><span class="bc-lang">${L.toUpperCase()}</span>${esc(t[L])}</div>`).join("");
+}
+function initBroadcastUI(){
+  const zs = document.getElementById("bcZone");
+  if(zs) zs.innerHTML = `<option value="">📢 All zones</option>` + ZONES.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(z=>`<option value="${z.id}">${z.name}</option>`).join("");
+  const ts = document.getElementById("bcTpl");
+  if(ts) ts.innerHTML = Object.entries(BCAST_TPL).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("") + `<option value="custom">✏️ Custom message</option>`;
+  bcPreview();
+}
+function renderBroadcastsAdmin(){
+  const host = document.getElementById("bcSent"); if(!host) return;
+  host.innerHTML = broadcasts.slice(0,12).map(b=>`
+    <div class="bc-row"><span class="bc-zone">${b.zone? esc(Z[b.zone]?.name||b.zone) : "All zones"}</span>
+      <div>${esc(b.texts.en)}<div class="aw-sub">${hhmm(b.ts)} · ${esc(b.by||"")} · sent in English, Tamil, Hindi</div></div>
+    </div>`).join("") || `<div style="color:var(--muted); font-size:13px;">No broadcasts sent yet.</div>`;
+}
+
+/* ---------- citizen surfaces: Safety Advisory panel (+ ticker via setTicker) ---------- */
+function renderBroadcastsCitizen(){
+  const host = document.getElementById("czBroadcasts"); if(!host) return;
+  host.innerHTML = broadcasts.length
+    ? broadcasts.slice(0,5).map(b=>`
+        <div class="bc-row"><span class="bc-zone">${b.zone? esc(Z[b.zone]?.name||b.zone) : "All Chennai"}</span>
+          <div>${esc(bcastText(b))}<div class="aw-sub">${hhmm(b.ts)} · Command Center</div></div>
+        </div>`).join("")
+    : `<div style="color:var(--muted); font-size:13px;">No area updates yet. Official zone-wise instructions will appear here in your language.</div>`;
+}
+function paintBroadcasts(){ renderBroadcastsAdmin(); renderBroadcastsCitizen(); if(typeof setTicker==="function") setTicker(); }

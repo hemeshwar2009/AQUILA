@@ -2,9 +2,34 @@
 
 Team Clovers · Code 9EB24C · Multi-Agent Disaster Response Coordinator
 
-A working prototype dashboard: citizen complaint portal + admin command center,
-with a live animated 2D Chennai city map, AI rescue-priority scoring, rescue-agent
-fleet simulation, citizen notifications, and historical Chennai disaster datasets.
+An all-hazard (floods + heatwaves) prototype: citizen complaint portal + admin
+command center, with a live animated 2D Chennai city map, AI priority scoring,
+an alert-watch agent on the (simulated) IMD feed, rescue-vehicle + volunteer
+dispatch, relief-supply tracking, zone-wise broadcasts in English/Tamil/Hindi,
+voice reporting in 12 Indian languages, an AI survival assistant, flood-safe
+routing, citizen notifications, and historical Chennai disaster datasets.
+
+## Code structure
+
+```
+index.html            page markup only
+css/aquila.css        all styles
+js/core.js            config, zones & roads, fleet, volunteers, supplies, state
+js/supabase.js        backend integration (demo mode when keys are empty)
+js/map.js             live 2D digital twin
+js/citizen.js         report form, my reports, notifications
+js/admin.js           command center pages
+js/broadcast.js       zone-wise broadcasts (EN/TA/HI)
+js/voice-gps.js       multilingual speech input + GPS capture
+js/boot.js            startup
+js/agents/            one file per cooperating agent:
+  triage.js             severity + transparent priority scoring
+  alertwatch.js         watches IMD alerts, re-weights queue & routes
+  dispatch.js           vehicle + volunteer matching, officer approval
+  field.js              vehicle GPS sim + crew lifecycle
+  sahayak.js            AI survival assistant (offline protocols + optional AI)
+  routes.js             safe-route Dijkstra over the danger-weighted graph
+```
 
 ## How to run (VS Code)
 
@@ -45,7 +70,9 @@ code in `index.html` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`):
    **Never** put the `service_role` key in `index.html`.
 2. **SQL Editor →** run [`supabase/schema.sql`](supabase/schema.sql) (admin accounts),
    then [`supabase/data.sql`](supabase/data.sql) (complaints, citizen notifications,
-   audit log, server functions and the 13 demo incidents).
+   audit log, server functions and the 13 demo incidents), then
+   [`supabase/all-hazard.sql`](supabase/all-hazard.sql) (heatwave types, heat-aware
+   severity, area-broadcasts table).
 3. **Authentication → Sign In / Providers → Email:** turn **off** "Allow new users to sign up",
    so nobody can register themselves. Officers join only by invite.
 4. **Authentication → URL Configuration:** set **Site URL** to where the app is
