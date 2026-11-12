@@ -43,8 +43,9 @@ code in `index.html` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`):
    **Project URL** and the **anon public** key into `SUPABASE_URL` and
    `SUPABASE_ANON_KEY` in `index.html`. The anon key is designed to be public.
    **Never** put the `service_role` key in `index.html`.
-2. **SQL Editor →** run [`supabase/schema.sql`](supabase/schema.sql). It creates the
-   `admins` table, row-level security policies and two helper functions.
+2. **SQL Editor →** run [`supabase/schema.sql`](supabase/schema.sql) (admin accounts),
+   then [`supabase/data.sql`](supabase/data.sql) (complaints, citizen notifications,
+   audit log, server functions and the 13 demo incidents).
 3. **Authentication → Sign In / Providers → Email:** turn **off** "Allow new users to sign up",
    so nobody can register themselves. Officers join only by invite.
 4. **Authentication → URL Configuration:** set **Site URL** to where the app is
@@ -63,6 +64,26 @@ Supabase emails the officer a one-time link. The link opens the app signed in,
 asks them to choose a password (min. 8 characters, a letter and a number), and
 marks the account active. Admins can disable, re-enable or remove other officers
 (never themselves), and a disabled officer is signed out within 30 seconds.
+
+**Where the data lives in Supabase mode:** complaints, citizen notifications and
+the audit log are stored in Supabase and shared by every officer and citizen.
+- Only signed-in, active admins can read or change the tables (row-level security).
+  The Command Center updates live when anything changes.
+- Citizens have no login. Each browser gets a random private reporter token;
+  reports go through server functions that validate the input, work out severity
+  and priority on the server, and only ever return that browser's own reports,
+  never priority scores. The public city map shows active incidents without
+  names, phone numbers or scores. Max 5 reports per device per 10 minutes.
+- The audit log is append-only: the server stamps the time and signed-in user,
+  and nobody can edit or delete entries. "Reset demo data" restores the 13 demo
+  incidents for everyone but keeps the audit log.
+
+**Citizen notifications and vehicle tracking:** citizens are notified when their
+report is received and when a vehicle is dispatched (with its base, distance and
+estimated arrival), and at each later step. Under **My Reports** a live tracker
+shows the vehicle's distance and arrival time, and the citizen map highlights
+"Your rescue vehicle". Vehicle positions are simulated from the dispatch time
+(no real GPS yet), so every screen shows the same position.
 
 ## Suggested demo flow
 1. Open the Citizen portal in one browser tab and the Admin center in a second tab.
@@ -91,16 +112,18 @@ one trusts the client.
 - **The demo admin login is not authentication.** Only a SHA-256 hash of
   `email:password` is stored in `index.html` (`ADMIN_ACCOUNTS`), but the hash can
   be brute-forced offline and the check is client-side only —
-  calling `show("admin")` from devtools skips it. Supabase mode fixes the
-  *password* check (it happens on Supabase's servers), but the command-center
-  data (complaints, audit log) is still kept in the browser, so the admin screens
-  themselves are not yet protected. Moving that data into Supabase tables with
-  row-level security is the next step before real use.
+  calling `show("admin")` from devtools skips it. In Supabase mode this no longer
+  matters: passwords are checked by Supabase, and the incident data itself is
+  protected by row-level security on the server, so opening the admin screens
+  without signing in shows no data.
 
-- **Ownership filtering happens in the browser.** Citizens see only their own
-  reports and notifications because the client filters on `owner`. With a server
-  that sends every record, this hides other people's data rather than protecting
-  it. Filtering has to move server-side, or it is a data leak.
+- **Citizen tokens are per browser.** Clearing site data or switching devices
+  loses access to "My Reports" (the reports themselves stay with the command
+  center). Anyone holding a citizen's token can see that citizen's reports.
+
+- **Ownership filtering (demo mode only).** In demo mode citizens see only their
+  own reports because the browser filters on `owner`. In Supabase mode this is
+  enforced on the server.
 
 - **Escape anything a reporter typed.** Reporter-supplied `name`, `phone` and
   `desc` are untrusted. Use the `esc()` helper for every such value interpolated

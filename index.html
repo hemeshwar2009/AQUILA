@@ -127,6 +127,14 @@ td select{padding:5px 8px; font-size:12px; width:auto;}
 .map-legend span{display:inline-flex; align-items:center; gap:6px;}
 .map-tip{position:absolute; pointer-events:none; background:#08182a; border:1px solid var(--border2); border-radius:8px; padding:8px 12px; font-size:12px; color:var(--ink); z-index:20; display:none; max-width:240px; box-shadow:0 8px 24px rgba(0,0,0,.5); line-height:1.5;}
 .zone-label{font-size:11px; fill:#bcd8ec; pointer-events:none; font-weight:600;}
+.mine-label{font-size:11px; font-weight:700; fill:#3fe0a5; paint-order:stroke; stroke:#04121f; stroke-width:3px; pointer-events:none;}
+.tracker{margin-top:10px; padding:12px 14px; border-radius:10px; background:rgba(25,190,130,.08); border:1px solid rgba(63,224,165,.3);}
+.tr-head{font-size:11px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:#3fe0a5; display:flex; align-items:center; gap:7px;}
+.tr-live{width:8px; height:8px; border-radius:50%; background:#3fe0a5; animation:pulse 1.6s infinite;}
+.tr-text{font-size:13px; color:var(--ink); margin-top:6px; line-height:1.45;}
+.tr-bar{height:6px; border-radius:999px; background:rgba(255,255,255,.08); margin-top:9px; overflow:hidden;}
+.tr-bar i{display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#16b3c9,#3fe0a5); transition:width 1s linear;}
+.tr-ends{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:4px;}
 .water-label{font-size:12px; fill:#79c4f0; font-style:italic; letter-spacing:2px; pointer-events:none;}
 
 /* charts */
@@ -1094,6 +1102,7 @@ const KEY_C = "aquila_complaints_v2", KEY_N = "aquila_notifs_v2", KEY_A = "aquil
 let complaints = [];
 let auditLog = [];
 function loadState(){
+  if(SB_ON){ return; }   // data comes from Supabase after sign-in / when the citizen portal opens
   try{
     const raw = localStorage.getItem(KEY_C);
     if(raw){ complaints = JSON.parse(raw); if(Array.isArray(complaints) && complaints.length) return; }
@@ -1102,15 +1111,17 @@ function loadState(){
   auditLog = [{ts:Date.now(), actor:"System", action:"Demo data loaded", cid:"—", detail:"13 seeded incidents (simulated data)"}];
   saveState(); saveAudit();
 }
-function saveState(){ try{ localStorage.setItem(KEY_C, JSON.stringify(complaints)); }catch(e){} }
-function loadAudit(){ try{ const r = localStorage.getItem(KEY_A); if(r) auditLog = JSON.parse(r); }catch(e){} }
-function saveAudit(){ try{ localStorage.setItem(KEY_A, JSON.stringify(auditLog)); }catch(e){} }
+function saveState(){ if(SB_ON) return sbPushChanges(); try{ localStorage.setItem(KEY_C, JSON.stringify(complaints)); }catch(e){} }
+function loadAudit(){ if(SB_ON) return; try{ const r = localStorage.getItem(KEY_A); if(r) auditLog = JSON.parse(r); }catch(e){} }
+function saveAudit(){ if(SB_ON) return; try{ localStorage.setItem(KEY_A, JSON.stringify(auditLog)); }catch(e){} }
 function log(actor, action, cid, detail){
   auditLog.push({ts:Date.now(), actor, action, cid, detail:detail||""});
   if(auditLog.length>800) auditLog.splice(0, auditLog.length-800);
+  if(SB_ON) return sbLog(actor, action, cid, detail);
   saveAudit();
 }
 function resetDemo(){
+  if(SB_ON) return sbResetDemo();
   try{ [KEY_C,KEY_N,KEY_A].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   complaints = []; auditLog = []; notifications = [];
   loadState(); saveNotifs(); closeIncident(); refreshAll(); toast("Demo data reset.");
@@ -1130,16 +1141,18 @@ let currentAdmin = null;
 /* ---------- Citizen notifications ---------- */
 let notifications = [];
 function loadNotifs(){
+  if(SB_ON){ notifications = []; return; }
   try{ const r = localStorage.getItem(KEY_N); notifications = r? JSON.parse(r):[]; }
   catch(e){ notifications = []; }
 }
-function saveNotifs(){ try{ localStorage.setItem(KEY_N, JSON.stringify(notifications)); }catch(e){} }
+function saveNotifs(){ if(SB_ON) return sbMarkRead(); try{ localStorage.setItem(KEY_N, JSON.stringify(notifications)); }catch(e){} }
 
 function agentDisplay(id){ const f = FLEET.find(f=>f.id===id); return f? `${f.icon} ${f.name} (${f.id})` : id; }
 
 /* creates a notification tied to a complaint; shown to the citizen who filed it */
 function notify(c, msg, icon){
   if(c.source!=="citizen") return;
+  if(SB_ON) return sbNotify(c, msg, icon);
   notifications.unshift({ id:"N"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
     ts:Date.now(), complaintId:c.id, owner:c.owner||null, source:c.source, msg, icon:icon||"🔔", read:false });
   if(notifications.length>80) notifications.length = 80;
@@ -1186,10 +1199,13 @@ document.addEventListener("click", e=>{
 function notifyStatusChange(c, prev){
   if(prev===c.status) return;
   const zn = Z[c.zone].name;
+  const tr = vehicleTrack(c);
   if(c.status==="Dispatched" && c.agent)
-    notify(c, `Approved by the command center. ${agentDisplay(c.agent)} has been dispatched to ${zn}.`, "🚨");
+    notify(c, `Approved by the command center. ${agentDisplay(c.agent)} has been dispatched from ${tr? tr.from.name : "its base"} to ${zn}` +
+      (tr? `, about ${tr.kmLeft.toFixed(1)} km away, arriving in about ${fmtEta(tr.msLeft)}` : "") + `. Track it live under My Reports.`, "🚨");
   else if(c.status==="Accepted")
-    notify(c, `The ${c.agent||"rescue"} crew has accepted your request and is on the way to ${zn}.`, "📡");
+    notify(c, `The ${c.agent||"rescue"} crew has accepted your request and is on the way to ${zn}` +
+      (tr && !tr.arrived? ` (${tr.kmLeft.toFixed(1)} km away)` : "") + `.`, "📡");
   else if(c.status==="In Progress")
     notify(c, `Rescue crew has reached ${zn}. Operation in progress.`, "🛟");
   else if(c.status==="Resolved")
@@ -1199,7 +1215,7 @@ function notifyStatusChange(c, prev){
 /* cross-tab live sync: open Citizen in one tab, Admin in another */
 window.addEventListener("storage", e=>{
   if(e.key===KEY_O){ loadOfficers(); enforceAdminAccess(); refreshAll(); return; }
-  if([KEY_C,KEY_N,KEY_A].includes(e.key)){
+  if(!SB_ON && [KEY_C,KEY_N,KEY_A].includes(e.key)){
     const before = myNotifs().filter(n=>!n.read).length;
     loadState(); loadNotifs(); loadAudit(); refreshAll();
     const fresh = myNotifs().filter(n=>!n.read);
@@ -1222,7 +1238,9 @@ function toggleAdminLogin(){
 function enterCitizen(){
   currentUser = "Guest Citizen";
   document.getElementById("fName").value = "";
+  if(SB_ON){ complaints = []; notifications = []; sbSeenNotifs = null; }
   show("citizen"); showPage("citizen","report"); refreshAll();
+  if(SB_ON) sbCitizenRefresh();
 }
 /* admin accounts: only a SHA-256 of "email:password" is stored (client-side demo, not real auth) */
 const ADMIN_ACCOUNTS = {
@@ -1329,6 +1347,127 @@ async function sbAcceptInvite(){
   setTimeout(()=>document.getElementById("adminPass").focus(), 50);
   toast("Password saved. Sign in to continue.");
 }
+/* =================================================================
+   SUPABASE INCIDENT DATA
+   Admins read/update the tables directly (row-level security allows only
+   active admins). Citizens never touch the tables: they go through server
+   functions with a private random token kept in this browser.
+   ================================================================= */
+const KEY_TOKEN = "aquila_citizen_token";
+let citizenToken = null, sbSynced = {}, sbChannel = null, sbReloadTimer = null, sbSeenNotifs = null;
+function getCitizenToken(){
+  if(citizenToken) return citizenToken;
+  try{ citizenToken = localStorage.getItem(KEY_TOKEN); }catch(e){}
+  if(!citizenToken || citizenToken.length < 32){
+    citizenToken = randomHex(24);
+    try{ localStorage.setItem(KEY_TOKEN, citizenToken); }catch(e){}
+  }
+  return citizenToken;
+}
+const msOf = v => v ? Date.parse(v) : Date.now();
+function sbFromRow(r){
+  const x = r.extra || {};
+  return {id:r.id, ts:msOf(r.created_at), zone:r.zone, type:r.type, severity:r.severity, people:r.people, depth:r.depth,
+    name:r.name, phone:r.phone, desc:r.description, status:r.status, agent:r.agent, source:r.source,
+    score:r.score, aiScore:r.ai_score, dupOf:r.dup_of, owner:null,
+    t:x.t||{}, override:x.override, approvedBy:x.approvedBy, closedBy:x.closedBy, outcome:x.outcome,
+    crewDone:x.crewDone, crewReport:x.crewReport, dupResolved:x.dupResolved};
+}
+function sbToRow(c){
+  return {status:c.status, agent:c.agent||null, score:c.score, dup_of:c.dupOf||null,
+    extra:{t:c.t||{}, override:c.override, approvedBy:c.approvedBy, closedBy:c.closedBy, outcome:c.outcome,
+      crewDone:c.crewDone, crewReport:c.crewReport, dupResolved:c.dupResolved}};
+}
+const sbErr = (what, error)=>{ console.warn(what, error); toast(`${what} failed: ${error?.message || "network error"}`, true); };
+
+/* ---- admin side ---- */
+async function sbLoadAdminData(){
+  if(!sb || !currentAdminId) return;
+  const [c, a] = await Promise.all([
+    sb.from("complaints").select("*").order("created_at", {ascending:false}),
+    sb.from("audit_log").select("created_at, actor, action, complaint_id, detail").order("created_at", {ascending:false}).limit(800),
+  ]);
+  if(!currentAdminId) return;                       // signed out while loading
+  if(c.error) return sbErr("Loading incidents", c.error);
+  complaints = c.data.map(sbFromRow);
+  sbSynced = Object.fromEntries(complaints.map(x=>[x.id, JSON.stringify(sbToRow(x))]));
+  if(!a.error) auditLog = a.data.reverse().map(e=>({ts:msOf(e.created_at), actor:e.actor, action:e.action, cid:e.complaint_id||"—", detail:e.detail}));
+  refreshAll();
+}
+/* push every complaint whose saved fields changed since the last sync */
+function sbPushChanges(){
+  if(!sb || !currentAdminId) return;
+  complaints.forEach(c=>{
+    const row = sbToRow(c), s = JSON.stringify(row);
+    if(sbSynced[c.id] === s) return;
+    sbSynced[c.id] = s;
+    sb.from("complaints").update(row).eq("id", c.id).then(({error})=>{ if(error){ delete sbSynced[c.id]; sbErr(`Saving ${c.id}`, error); } });
+  });
+}
+function sbLog(actor, action, cid, detail){
+  if(!sb || !currentAdminId) return Promise.resolve();
+  return sb.from("audit_log").insert({actor:String(actor).slice(0,120), action:String(action).slice(0,80),
+    complaint_id: cid && cid!=="—" ? cid : null, detail:String(detail||"").slice(0,1000)})
+    .then(({error})=>{ if(error) console.warn("audit log", error); });
+}
+function sbNotify(c, msg, icon){
+  if(!sb || !currentAdminId) return;
+  sb.from("notifications").insert({complaint_id:c.id, msg:msg.slice(0,500), icon:icon||"🔔"})
+    .then(({error})=>{ if(error) console.warn("notification", error); });
+}
+function sbSubscribe(){
+  if(!sb || sbChannel) return;
+  const reload = ()=>{ clearTimeout(sbReloadTimer); sbReloadTimer = setTimeout(sbLoadAdminData, 400); };
+  sbChannel = sb.channel("aquila-admin")
+    .on("postgres_changes", {event:"*", schema:"public", table:"complaints"}, reload)
+    .on("postgres_changes", {event:"INSERT", schema:"public", table:"audit_log"}, reload)
+    .subscribe();
+}
+function sbUnsubscribe(){ if(sb && sbChannel){ sb.removeChannel(sbChannel); } sbChannel = null; }
+async function sbSubmitScenario(fields){
+  const {error} = await sb.rpc("submit_report", {p_zone:fields.zone, p_type:fields.type, p_people:fields.people, p_depth:fields.depth,
+    p_name:fields.name, p_phone:fields.phone, p_desc:fields.desc, p_token:null, p_source:"scenario"});
+  if(error) sbErr("Adding scenario report", error);
+}
+async function sbResetDemo(){
+  if(!confirm("Reset ALL incidents in the shared database to the 13 demo incidents? Every officer will see this. The audit log is kept.")) return;
+  const {error} = await sb.rpc("reset_demo");
+  if(error) return sbErr("Reset", error);
+  closeIncident(); await sbLoadAdminData(); toast("Demo data reset.");
+}
+
+/* ---- citizen side ---- */
+async function sbCitizenRefresh(){
+  const client = await sbReady; if(!client || !document.getElementById("citizenShell").classList.contains("active")) return;
+  const tok = getCitizenToken();
+  const [pub, mine, notes] = await Promise.all([
+    client.rpc("public_incidents"), client.rpc("citizen_reports", {p_token:tok}), client.rpc("citizen_notifications", {p_token:tok})]);
+  if(pub.error || mine.error){ return sbErr("Loading reports", pub.error || mine.error); }
+  const base = r=>({id:r.id, ts:msOf(r.created_at), zone:r.zone, type:r.type, people:r.people, depth:r.depth||0,
+    status:r.status, agent:r.agent, t:r.t||{}, outcome:r.outcome});
+  const byId = {};
+  (pub.data||[]).forEach(r=>{ byId[r.id] = {...base(r), source:"public", score:r.critical? 80 : 0}; });
+  (mine.data||[]).forEach(r=>{ byId[r.id] = {...(byId[r.id]||{score:0}), ...base(r), source:"citizen", owner:null}; });
+  complaints = Object.values(byId).sort((a,b)=>b.ts-a.ts);
+  if(!notes.error){
+    notifications = (notes.data||[]).map(n=>({id:"S"+n.id, ts:msOf(n.created_at), complaintId:n.complaint_id, owner:null, source:"citizen", msg:n.msg, icon:n.icon, read:n.read}));
+    const fresh = notifications.filter(n=>!n.read && sbSeenNotifs && !sbSeenNotifs.has(n.id));
+    sbSeenNotifs = new Set(notifications.map(n=>n.id));
+    if(fresh[0]) toast(fresh[0].icon+" "+fresh[0].msg);
+  }
+  refreshAll();
+}
+async function sbCitizenSubmit(fields){
+  const client = await sbReady; if(!client) return null;
+  const {data, error} = await client.rpc("submit_report", {p_zone:fields.zone, p_type:fields.type, p_people:fields.people, p_depth:fields.depth,
+    p_name:fields.name, p_phone:fields.phone, p_desc:fields.desc, p_token:getCitizenToken(), p_source:"citizen"});
+  if(error){ toast(error.message || "Could not submit the report. Please try again or call 112.", true); return null; }
+  return data?.id || null;
+}
+function sbMarkRead(){ if(sb) sb.rpc("citizen_mark_read", {p_token:getCitizenToken()}).then(()=>{}); }
+/* citizens poll for updates every 8 s while their portal is open */
+setInterval(()=>{ if(SB_ON && document.getElementById("citizenShell").classList.contains("active")) sbCitizenRefresh(); }, 8000);
+
 /* signed-in officers are re-checked every 30 s, so disabling someone signs them out */
 setInterval(async ()=>{
   if(!SB_ON || !sb || !currentAdminId) return;
@@ -1511,8 +1650,10 @@ async function enterAdmin(){
     currentAdmin = who.name; currentAdminEmail = email; currentAdminId = who.id;
     document.getElementById("adminPass").value = "";
     document.getElementById("adminWho").textContent = "👤 " + currentAdmin;
+    complaints = []; auditLog = []; notifications = [];
     log(currentAdmin, "Signed in", "—", "Command center (Supabase)");
     show("admin"); showPage("admin","map"); refreshAll(); sbLoadOfficers();
+    await sbLoadAdminData(); sbSubscribe();
     return;
   }
   loadOfficers();
@@ -1533,7 +1674,11 @@ async function enterAdmin(){
 function logout(){
   document.getElementById("adminPop").classList.remove("open");
   if(currentAdmin && document.getElementById("adminShell").classList.contains("active")) log(currentAdmin, "Signed out", "—", "");
-  if(SB_ON && sb && currentAdminId) sb.auth.signOut({scope:"local"});
+  if(SB_ON){
+    sbUnsubscribe();
+    if(sb && currentAdminId) sb.auth.signOut({scope:"local"});
+    complaints = []; auditLog = []; notifications = []; sbSynced = {};   // never leave incident data in memory after sign-out
+  }
   currentUser=null; currentAdmin=null; currentAdminEmail=null; currentAdminId=null; sbOfficers=[]; document.getElementById("adminPass").value=""; closeIncident(); show("landing");
   const r = document.getElementById("invResult"); if(r){ r.classList.add("hidden"); r.innerHTML = ""; }
 }
@@ -1762,6 +1907,31 @@ function pointOnRoad(road, t){
   return [x1+(x2-x1)*lt, y1+(y2-y1)*lt];
 }
 
+/* ---------- simulated vehicle GPS ----------
+   A dispatched vehicle drives from its base to the incident at a steady speed,
+   computed from the dispatch time, so every screen (admin map, citizen map,
+   citizen tracker) shows the same position. 1 map unit ≈ 30 m. */
+const KM_PER_UNIT = 0.03;
+const SPEED_UNITS_PER_S = {boat:2.5, truck:4, car:5, ambulance:5, logistics:4};
+function vehicleTrack(c, now){
+  const f = c && c.agent && FLEET.find(x=>x.id===c.agent); if(!f) return null;
+  const from = Z[f.home], to = Z[c.zone]; if(!from || !to) return null;
+  const dist = Math.hypot(to.x-from.x, to.y-from.y);
+  const travelMs = Math.max(20000, dist / (SPEED_UNITS_PER_S[f.kind]||4) * 1000);
+  const start = c.t?.dispatched || c.ts;
+  const onScene = c.status==="In Progress" || c.status==="Resolved";
+  const p = onScene ? 1 : Math.max(0, Math.min(1, ((now||Date.now()) - start) / travelMs));
+  return {fleet:f, from, to, p, x: from.x + (to.x-from.x)*p, y: from.y + (to.y-from.y)*p,
+    kmLeft: dist*(1-p)*KM_PER_UNIT, kmTotal: dist*KM_PER_UNIT, msLeft: travelMs*(1-p), arrived: p>=1, onScene};
+}
+function fmtEta(ms){ const s = Math.round(ms/1000); return s<60? `${s} s` : `${Math.floor(s/60)} min ${String(s%60).padStart(2,"0")} s`; }
+function trackText(c){
+  const tr = vehicleTrack(c); if(!tr) return "";
+  if(tr.onScene) return `${tr.fleet.icon} ${tr.fleet.name} is at ${tr.to.name}; the crew is on scene.`;
+  if(tr.arrived) return `${tr.fleet.icon} ${tr.fleet.name} has reached ${tr.to.name}; the crew is getting into position.`;
+  return `${tr.fleet.icon} ${tr.fleet.name} is ${tr.kmLeft.toFixed(1)} km away, arriving in about ${fmtEta(tr.msLeft)}.`;
+}
+
 /* agent targets follow assignments */
 function updateAgentTargets(){
   const assigned = {};
@@ -1783,8 +1953,20 @@ function updateAgentTargets(){
       const dest = a._dest;
       a.tx = dest.x; a.ty = dest.y;
       a.busy = !!task;
-      a.el.firstChild.setAttribute("fill", task? "rgba(208,59,59,0.18)":"rgba(57,135,229,0.15)");
-      a.el.firstChild.setAttribute("stroke", task? "rgba(208,59,59,0.6)":"rgba(57,135,229,0.45)");
+      a.track = task && (task.status==="Dispatched" || task.status==="Accepted") ? task : null;   // en route: follow simulated GPS
+      // on the citizen map, highlight the vehicle coming to this citizen's own report
+      a.mine = !m.interactive && !!task && task.source==="citizen";
+      const halo = a.el.firstChild;
+      halo.setAttribute("r", a.mine? "15" : "11");
+      halo.setAttribute("fill", a.mine? "rgba(25,190,130,0.25)" : task? "rgba(208,59,59,0.18)":"rgba(57,135,229,0.15)");
+      halo.setAttribute("stroke", a.mine? "#3fe0a5" : task? "rgba(208,59,59,0.6)":"rgba(57,135,229,0.45)");
+      halo.setAttribute("stroke-width", a.mine? "2.5" : "1");
+      if(!a.label){
+        a.label = document.createElementNS(m.svg.namespaceURI, "text");
+        a.label.setAttribute("y", "-20"); a.label.setAttribute("text-anchor", "middle"); a.label.setAttribute("class", "mine-label");
+        a.label.textContent = "Your rescue vehicle"; a.el.appendChild(a.label);
+      }
+      a.label.style.display = a.mine? "" : "none";
     });
   });
 }
@@ -1800,7 +1982,9 @@ function animate(now){
       const [x,y] = pointOnRoad(tr.road, tr.t);
       tr.el.setAttribute("cx",x); tr.el.setAttribute("cy",y);
     });
+    const nowMs = Date.now();
     m.agents.forEach(a=>{
+      if(a.track){ const tr = vehicleTrack(a.track, nowMs); if(tr){ a.tx = tr.x; a.ty = tr.y; } }
       // base position glides to the target; never overshoots
       const gx = a.tx + a.ox, gy = a.ty + a.oy;
       const dx = gx - a.x, dy = gy - a.y;
@@ -1842,6 +2026,7 @@ function draftComplaint(){
   return d;
 }
 function addReport(fields, source, owner){
+  if(SB_ON){ sbSubmitScenario(fields); return null; }   // scored and stored by the server
   const c = {...fields, id:nextId(), ts:Date.now(), status:"Pending", agent:null, source, owner:owner||null, t:{}};
   c.score = c.aiScore = priorityScore(c);
   c.dupOf = findDup(c);
@@ -1850,12 +2035,24 @@ function addReport(fields, source, owner){
       `${TYPE_META[c.type].label}, ${Z[c.zone].name}, ${c.people} people · AI priority ${c.score}` + (c.dupOf? ` · flagged possible duplicate of ${c.dupOf}`:""));
   return c;
 }
+let submitting = false;
 function submitComplaint(){
   const name = document.getElementById("fName").value.trim();
   const phone = document.getElementById("fPhone").value.trim();
   if(!name){ toast("Please enter the reporter name.", true); return; }
   if(!/^[6-9]\d{9}$/.test(phone)){ toast("Please enter a valid 10-digit Indian mobile number.", true); return; }
   if(currentUser==="Guest Citizen") currentUser = name;
+  if(SB_ON){
+    if(submitting) return; submitting = true;
+    const fields = {...draftComplaint(), name, phone, desc: document.getElementById("fDesc").value.trim() || "—"};
+    sbCitizenSubmit(fields).then(async id=>{
+      submitting = false; if(!id) return;
+      toast(`Report ${id} submitted. An officer is reviewing it.`);
+      document.getElementById("fDesc").value=""; document.getElementById("fPhone").value="";
+      showPage("citizen","mine"); await sbCitizenRefresh();
+    });
+    return;
+  }
   const c = addReport({...draftComplaint(), name, phone, desc: document.getElementById("fDesc").value.trim() || "—"}, "citizen", currentUser);
   toast(`Report ${c.id} submitted. An officer is reviewing it.`);
   document.getElementById("fDesc").value=""; document.getElementById("fPhone").value="";
@@ -1908,8 +2105,26 @@ function renderCitizen(){
         c.status==="Pending" ? "⏳ Awaiting command-center review" :
         c.status==="Resolved" ? "✅ " + esc(c.outcome||"Resolved") :
         "Last update " + hhmm(Math.max(c.t?.dispatched||0, c.t?.accepted||0, c.t?.inprogress||0, c.ts))}</div>
+      ${c.agent && c.status!=="Pending" && c.status!=="Resolved" ? `
+      <div class="tracker">
+        <div class="tr-head"><span class="tr-live"></span>Live vehicle tracking <span style="color:var(--muted); font-weight:500;">· simulated GPS</span></div>
+        <div class="tr-text" data-track="${esc(c.id)}">${esc(trackText(c))}</div>
+        <div class="tr-bar"><i data-trackbar="${esc(c.id)}" style="width:${Math.round((vehicleTrack(c)?.p||0)*100)}%"></i></div>
+        <div class="tr-ends"><span>${esc(vehicleTrack(c)?.from.name||"")} base</span><span>${esc(Z[c.zone].name)}</span></div>
+        <button class="btn ghost sm" style="margin-top:8px;" onclick="showPage('citizen','cmap')">🗺️ See it on the live map</button>
+      </div>` : ""}
     </div>`).join("");
 }
+/* keep the citizen's tracker text and progress bar moving every second */
+setInterval(()=>{
+  if(!document.getElementById("citizenShell").classList.contains("active")) return;
+  document.querySelectorAll("[data-track]").forEach(el=>{
+    const c = complaints.find(x=>x.id===el.dataset.track); if(!c) return;
+    el.textContent = trackText(c);
+    const bar = document.querySelector(`[data-trackbar="${CSS.escape(c.id)}"]`);
+    if(bar) bar.style.width = Math.round((vehicleTrack(c)?.p||0)*100) + "%";
+  });
+}, 1000);
 
 /* =================================================================
    ADMIN DASHBOARD
