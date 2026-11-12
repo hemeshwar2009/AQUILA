@@ -96,18 +96,26 @@ shows the vehicle's distance and arrival time, and the citizen map highlights
 6. Admin → set status to In Progress / Resolved → citizen gets notified at each step.
 
 ## Notes
-- Data persists in the browser (localStorage). Use "Reset demo data" in the
-  Complaints Register tab to restore the 12 seeded incidents.
+- In demo mode, data persists in the browser (localStorage); in Supabase mode,
+  incidents live in Postgres and are shared across devices. Use "Reset demo
+  data" in the Complaints Register tab to restore the 12 seeded incidents.
 - Historical disaster figures (2004 Tsunami, 2015 Floods, Vardah, 2019 Water
   Crisis, Mandous, Michaung) are approximate, compiled from public reporting
   for demo calibration.
 
-## Security notes — read before adding a backend
+## Security notes
 
-This prototype runs entirely in the browser with no server, so all data already
-belongs to whoever opens the page. The items below are **safe as a demo** and
-become **real vulnerabilities the moment a shared backend exists**, because each
-one trusts the client.
+The app runs in two modes, and the distinction matters for every item below.
+
+**Demo mode** (no Supabase keys configured) runs entirely in the browser. All
+data already belongs to whoever opens the page, so the client-side checks below
+are presentation, not protection — safe for a demo, never for real reporters.
+
+**Supabase mode** adds a real backend. Sign-in is handled by Supabase Auth and
+incident data is protected by row-level security on the server, so the
+client-side weaknesses stop being load-bearing.
+
+Each bullet says which mode it applies to.
 
 - **The demo admin login is not authentication.** Only a SHA-256 hash of
   `email:password` is stored in `index.html` (`ADMIN_ACCOUNTS`), but the hash can
