@@ -8,3 +8,6 @@ Desktop.ini
 .vscode/
 *.swp
 *~
+
+# Local secrets
+*.local.md

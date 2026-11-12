@@ -23,12 +23,14 @@ then open http://localhost:8000
 
 ## Demo logins
 - **Citizen Portal** — enter any name.
-- **Admin Command Center** — passcode: `aquila2026`
+- **Admin Command Center** — sign in with the admin email and password. They are
+  kept in `admin-credentials.local.md` (gitignored, not in the repo); ask the team for them.
 
 ## Suggested demo flow
 1. Open the Citizen portal in one browser tab and the Admin center in a second tab.
 2. As a citizen, file: "Rescue needed, chest-deep water, 6 people, Velachery".
-3. Watch the AI priority preview score it CRITICAL before you submit.
+3. Citizens never pick or see a severity: the system assesses it from type,
+   water depth and people affected, and only the officer sees the priority.
 4. In the Admin tab: it tops the Priority Queue; assign a boat agent in the
    Complaints Register and watch the agent drive to the zone on the live map.
 5. Back in the Citizen tab: the 🔔 bell shows "Vehicle dispatched!" in real time.
@@ -48,8 +50,9 @@ belongs to whoever opens the page. The items below are **safe as a demo** and
 become **real vulnerabilities the moment a shared backend exists**, because each
 one trusts the client.
 
-- **The admin passcode is not authentication.** `aquila2026` is hardcoded in
-  `index.html` and printed on the login screen. The check is client-side only —
+- **The admin login is not authentication.** Only a SHA-256 hash of
+  `email:password` is stored in `index.html` (`ADMIN_ACCOUNTS`), but the hash can
+  be brute-forced offline and the check is client-side only —
   calling `show("admin")` from devtools skips it. Any real deployment needs
   server-side auth; this check must not survive.
 
@@ -65,5 +68,6 @@ one trusts the client.
   code consistent with it.
 
 Already handled: phone is validated to 10 digits, the people count is coerced to
-a number, and zone/type/severity come from fixed `<select>` options. The app
+a number, zone/type/depth come from fixed `<select>` options, and severity is computed
+by the system rather than entered by the user. The app
 makes no network calls and uses no `eval`, `document.write` or similar sinks.

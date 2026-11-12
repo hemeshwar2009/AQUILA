@@ -4,559 +4,399 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aquila — Chennai Disaster Response Coordinator</title>
-<meta name="description" content="Aquila is a multi-agent disaster response coordinator for Chennai: citizen reporting, AI rescue-priority scoring and coordinated agent dispatch on a live city digital twin.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme: dark;
-  --bg:#080c13; --bg2:#0b111b; --panel:#0f1622; --panel2:#141d2b; --surface:#18222f;
-  --border:rgba(148,163,184,.12); --border2:rgba(148,163,184,.2);
-  --ink:#e8edf4; --ink2:#a9b4c4; --muted:#6c788b;
-  --accent:#4f8cff; --accent2:#3a76ec; --accent-soft:rgba(79,140,255,.12);
-  --teal:#22b38a; --teal2:#1a9a76;
-  --good:#2fbf71; --warn:#f2b33d; --serious:#f0874f; --critical:#e5484d;
-  --radius:12px; --radius-sm:8px;
-  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
-  --font:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
-  font-family:var(--font);
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --surface:#1a1f2b;
+  --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.14);
+  --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+  --accent:#3987e5; --accent2:#2a6ab8;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s7:#9085e9;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --water:#13395e; --water2:#1a4a78; --land:#141a24; --road:#2c3545;
+  --grid:#2c2c2a;
+  --radius:12px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html,body{height:100%;}
-body{background:var(--bg); color:var(--ink); font-family:var(--font); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; font-feature-settings:"cv11","ss01";}
+body{background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased;}
 button{font-family:inherit; cursor:pointer;}
-input,select,textarea{font-family:inherit; color:var(--ink); background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:10px 12px; font-size:14px; width:100%; outline:none; transition:border-color .15s, box-shadow .15s;}
-input::placeholder,textarea::placeholder{color:var(--muted);}
-input:focus,select:focus,textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
-textarea{resize:vertical;}
-label{font-size:12.5px; color:var(--ink2); display:block; margin-bottom:6px; font-weight:500;}
+input,select,textarea{font-family:inherit; color:var(--ink); background:var(--panel2); border:1px solid var(--border2); border-radius:8px; padding:10px 12px; font-size:14px; width:100%; outline:none; transition:border-color .15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+label{font-size:12px; color:var(--ink2); display:block; margin-bottom:6px; font-weight:600; letter-spacing:.3px;}
 .hidden{display:none !important;}
-.i{width:16px; height:16px; flex:none; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; vertical-align:middle;}
-.i.lg{width:20px; height:20px;}
-.mono{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:.92em;}
-
-/* brand */
-.brandmark{display:inline-flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink);}
-.brandmark .mark{width:30px; height:30px; border-radius:8px; background:linear-gradient(145deg,#5b97ff,#2f62d9); display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 0 rgba(255,255,255,.25);}
-.brandmark .mark svg{width:18px; height:18px; fill:#fff; stroke:none;}
-.brandmark .word{font-weight:800; font-size:16px; letter-spacing:.14em;}
-.brandmark .word small{display:block; font-size:10.5px; font-weight:500; letter-spacing:.02em; color:var(--muted); margin-top:1px;}
-
-/* buttons */
-.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--accent); color:#fff; border:1px solid transparent; border-radius:var(--radius-sm); padding:10px 18px; font-size:14px; font-weight:600; transition:background .15s, border-color .15s, color .15s; white-space:nowrap;}
-.btn:hover{background:var(--accent2);}
-.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
-.btn.teal{background:var(--teal);} .btn.teal:hover{background:var(--teal2);}
-.btn.ghost{background:transparent; border-color:var(--border2); color:var(--ink2);}
-.btn.ghost:hover{border-color:var(--ink2); color:var(--ink); background:rgba(255,255,255,.03);}
-.btn.sm{padding:7px 12px; font-size:13px;}
-.btn.block{width:100%;}
-.btn.danger{background:var(--critical);}
 
 /* ============ LANDING ============ */
-#landing{min-height:100vh; display:flex; flex-direction:column; position:relative; overflow:hidden;
-  background:
-    radial-gradient(900px 520px at 85% -10%, rgba(79,140,255,.16), transparent 60%),
-    radial-gradient(700px 420px at -5% 105%, rgba(34,179,138,.08), transparent 60%),
-    var(--bg);}
-#landing::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
-  background-image:linear-gradient(rgba(148,163,184,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.06) 1px, transparent 1px);
-  background-size:48px 48px; mask-image:radial-gradient(ellipse at 60% 30%, #000 20%, transparent 70%); -webkit-mask-image:radial-gradient(ellipse at 60% 30%, #000 20%, transparent 70%);}
-.l-nav{position:relative; display:flex; align-items:center; gap:16px; padding:18px 40px; border-bottom:1px solid var(--border);}
-.l-nav .spacer{flex:1;}
-.l-nav .navlinks{display:flex; gap:26px; font-size:13.5px; color:var(--ink2);}
-.l-nav .navlinks a{color:inherit; text-decoration:none;} .l-nav .navlinks a:hover{color:var(--ink);}
-.pill{display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:500; color:var(--ink2); padding:5px 11px; border:1px solid var(--border2); border-radius:999px; background:rgba(255,255,255,.02);}
-.l-main{position:relative; flex:1; width:100%; max-width:1240px; margin:0 auto; padding:72px 40px 56px; display:grid; grid-template-columns:1.1fr 1fr; gap:64px; align-items:center;}
-.eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:#8db4ff; background:var(--accent-soft); border:1px solid rgba(79,140,255,.25); padding:5px 12px; border-radius:999px;}
-.l-hero h1{font-size:50px; line-height:1.08; font-weight:800; letter-spacing:-.025em; margin-top:22px;}
-.l-hero h1 span{color:#7aa8ff;}
-.l-hero p.lead{font-size:17px; color:var(--ink2); line-height:1.65; margin-top:20px; max-width:540px;}
-.l-stats{display:flex; gap:40px; margin-top:40px; padding-top:28px; border-top:1px solid var(--border); flex-wrap:wrap;}
-.l-stats b{display:block; font-size:26px; font-weight:700; letter-spacing:-.02em;}
-.l-stats span{font-size:12.5px; color:var(--muted);}
-.access{display:flex; flex-direction:column; gap:16px;}
-.access-card{background:rgba(15,22,34,.86); backdrop-filter:blur(8px); border:1px solid var(--border2); border-radius:16px; padding:24px; box-shadow:var(--shadow); transition:border-color .2s;}
-.access-card:hover{border-color:rgba(148,163,184,.32);}
-.access-card .ac-head{display:flex; gap:14px; align-items:flex-start; margin-bottom:18px;}
-.ic-tile{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:none;}
-.ic-tile.teal{background:rgba(34,179,138,.12); color:#4fd1a8; border:1px solid rgba(34,179,138,.28);}
-.ic-tile.blue{background:var(--accent-soft); color:#8db4ff; border:1px solid rgba(79,140,255,.28);}
-.ic-tile.red{background:rgba(229,72,77,.1); color:#ff8a8d; border:1px solid rgba(229,72,77,.28);}
-.ic-tile.amber{background:rgba(242,179,61,.1); color:#f6c869; border:1px solid rgba(242,179,61,.28);}
-.access-card h3{font-size:16.5px; font-weight:700;}
-.access-card p{font-size:13px; color:var(--ink2); margin-top:3px; line-height:1.55;}
-.ac-row{display:flex; gap:10px;}
-.ac-row input{flex:1;}
-.hint{font-size:12px; color:var(--muted); margin-top:10px; display:flex; align-items:center; gap:6px;}
-.hint code{font-family:var(--mono); font-size:11.5px; color:var(--ink2); background:var(--panel2); border:1px solid var(--border); padding:1px 6px; border-radius:5px;}
-.l-features{position:relative; border-top:1px solid var(--border); background:rgba(11,17,27,.7);}
-.l-features .inner{max-width:1240px; margin:0 auto; padding:44px 40px; display:grid; grid-template-columns:repeat(4,1fr); gap:32px;}
-.feat h4{font-size:14.5px; font-weight:600; margin-top:14px;}
-.feat p{font-size:13px; color:var(--ink2); margin-top:6px; line-height:1.6;}
-.l-foot{position:relative; border-top:1px solid var(--border); padding:20px 40px; display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; font-size:12.5px; color:var(--muted);}
-@media (max-width:980px){
-  .l-main{grid-template-columns:1fr; gap:44px; padding:48px 24px;}
-  .l-hero h1{font-size:38px;}
-  .l-features .inner{grid-template-columns:1fr 1fr; padding:36px 24px;}
-  .l-nav{padding:16px 24px;} .l-nav .navlinks{display:none;}
-  .l-foot{padding:18px 24px;}
-}
-@media (max-width:560px){
-  .l-hero h1{font-size:31px;} .l-hero p.lead{font-size:15.5px;}
-  .l-features .inner{grid-template-columns:1fr;}
-  .l-stats{gap:26px;}
-  .ac-row{flex-direction:column;}
-  .l-nav .pill{display:none;}
-}
+#landing{min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; position:relative; overflow:hidden;
+  background: radial-gradient(1200px 600px at 70% -10%, rgba(57,135,229,.18), transparent 60%),
+              radial-gradient(900px 500px at 10% 110%, rgba(25,158,112,.10), transparent 60%), var(--bg);}
+#landing .logo{font-size:52px; font-weight:800; letter-spacing:8px; background:linear-gradient(90deg,#6db3ff,#3987e5 50%,#9085e9); -webkit-background-clip:text; background-clip:text; color:transparent;}
+#landing .sub{color:var(--ink2); margin-top:10px; font-size:15px; text-align:center; max-width:560px; line-height:1.6;}
+#landing .badge{display:inline-block; margin-top:14px; padding:5px 14px; border:1px solid var(--border2); border-radius:999px; font-size:12px; color:var(--muted); letter-spacing:1px;}
+.rolecards{display:flex; gap:24px; margin-top:44px; flex-wrap:wrap; justify-content:center;}
+.rolecard{width:320px; background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:28px; transition:transform .2s, border-color .2s; position:relative;}
+.rolecard:hover{transform:translateY(-4px); border-color:var(--accent);}
+.rolecard .ric{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px; margin-bottom:16px;}
+.rolecard h3{font-size:19px; margin-bottom:8px;}
+.rolecard p{font-size:13px; color:var(--ink2); line-height:1.55; margin-bottom:18px;}
+.btn{display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:11px 20px; font-size:14px; font-weight:600; transition:background .15s;}
+.btn:hover{background:var(--accent2);}
+.btn.ghost{background:transparent; border:1px solid var(--border2); color:var(--ink2);}
+.btn.ghost:hover{border-color:var(--accent); color:var(--ink);}
+.btn.sm{padding:7px 14px; font-size:13px;}
+.btn.danger{background:var(--critical);}
+#adminAuth{margin-top:14px;}
+.hint{font-size:11.5px; color:var(--muted); margin-top:8px;}
 
 /* ============ APP SHELL ============ */
 .shell{display:none; min-height:100vh;}
 .shell.active{display:block;}
-.topbar{display:flex; align-items:center; gap:14px; padding:0 24px; height:60px; background:rgba(11,17,27,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50;}
-.topbar .divider{width:1px; height:24px; background:var(--border2);}
-.topbar .rolechip{font-size:12px; font-weight:600; color:var(--ink2); display:inline-flex; align-items:center; gap:7px;}
-.rolechip .rdot{width:7px; height:7px; border-radius:50%;}
-.rolechip.citizen .rdot{background:var(--teal);}
-.rolechip.admin .rdot{background:var(--critical);}
+.topbar{display:flex; align-items:center; gap:16px; padding:14px 24px; background:var(--panel); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50;}
+.topbar .brand{font-weight:800; letter-spacing:3px; font-size:17px; color:#8fbcf5;}
+.topbar .rolechip{font-size:11px; padding:4px 10px; border-radius:999px; letter-spacing:.5px; font-weight:700;}
+.rolechip.citizen{background:rgba(25,158,112,.18); color:#4ad2a0; border:1px solid rgba(25,158,112,.4);}
+.rolechip.admin{background:rgba(208,59,59,.15); color:#f08a8a; border:1px solid rgba(208,59,59,.4);}
 .topbar .spacer{flex:1;}
-.clock{font-family:var(--mono); font-size:12.5px; color:var(--ink2); font-variant-numeric:tabular-nums;}
-.livechip{display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:500; color:var(--ink2); padding:5px 10px; border:1px solid var(--border); border-radius:999px; background:rgba(47,191,113,.06);}
-.livedot{width:7px;height:7px;border-radius:50%;background:var(--good); animation:pulse 1.8s infinite;}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(47,191,113,.55);}70%{box-shadow:0 0 0 7px rgba(47,191,113,0);}100%{box-shadow:0 0 0 0 rgba(47,191,113,0);}}
-.userchip{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:var(--ink2);}
-.avatar{width:28px; height:28px; border-radius:50%; background:var(--panel2); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; color:var(--ink);}
-@media (max-width:760px){ .topbar{padding:0 14px; gap:10px;} .clock,.topbar .divider,.userchip span.uname,.livechip{display:none;} }
-@media (max-width:420px){ .topbar .btn.ghost{font-size:0; gap:0; padding:9px;} .topbar .rolechip{display:none;} }
+.clock{font-size:13px; color:var(--ink2); font-variant-numeric:tabular-nums;}
+.livechip{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink2);}
+.livedot{width:8px;height:8px;border-radius:50%;background:var(--good); animation:pulse 1.6s infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(12,163,12,.5);}70%{box-shadow:0 0 0 8px rgba(12,163,12,0);}100%{box-shadow:0 0 0 0 rgba(12,163,12,0);}}
 
-.wrap{max-width:1480px; margin:0 auto; padding:24px;}
-@media (max-width:560px){ .wrap{padding:16px;} }
-.page-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap;}
-.page-head h1{font-size:22px; font-weight:700; letter-spacing:-.015em;}
-.page-head p{font-size:13.5px; color:var(--muted); margin-top:3px;}
+.wrap{max-width:1500px; margin:0 auto; padding:22px;}
 .grid{display:grid; gap:18px;}
-.card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;}
-.card h2{font-size:14.5px; font-weight:600; display:flex; align-items:center; gap:9px; letter-spacing:-.005em;}
-.card h2 .i{color:var(--muted);}
-.card .cap{font-size:12.5px; color:var(--muted); margin:4px 0 16px;}
+.card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px;}
+.card h2{font-size:15px; margin-bottom:4px; display:flex; align-items:center; gap:8px;}
+.card .cap{font-size:12px; color:var(--muted); margin-bottom:14px;}
 
-/* alert banner */
-.ticker{background:linear-gradient(90deg, rgba(229,72,77,.09), rgba(242,179,61,.05)); border:1px solid rgba(229,72,77,.22); border-radius:10px; padding:8px 8px 8px 8px; display:flex; align-items:center; gap:12px; overflow:hidden; margin-bottom:20px;}
-.ticker .tk-label{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; color:#ff9a9d; background:rgba(229,72,77,.14); padding:4px 10px; border-radius:6px; white-space:nowrap; letter-spacing:.02em;}
-.ticker .tk-track{flex:1; overflow:hidden; position:relative; height:20px;}
-.ticker .tk-move{position:absolute; white-space:nowrap; font-size:13px; line-height:20px; color:var(--ink2); animation:tkslide 45s linear infinite;}
+/* ticker */
+.ticker{background:linear-gradient(90deg, rgba(208,59,59,.14), rgba(250,178,25,.10)); border:1px solid rgba(208,59,59,.3); border-radius:10px; padding:9px 14px; display:flex; align-items:center; gap:12px; overflow:hidden; margin-bottom:18px;}
+.ticker .tk-label{font-size:11px; font-weight:800; color:#f08a8a; letter-spacing:1px; white-space:nowrap;}
+.ticker .tk-track{flex:1; overflow:hidden; position:relative; height:18px;}
+.ticker .tk-move{position:absolute; white-space:nowrap; font-size:13px; color:var(--ink2); animation:tkslide 38s linear infinite;}
 @keyframes tkslide{from{transform:translateX(100%);} to{transform:translateX(-100%);}}
-@media (prefers-reduced-motion:reduce){ .ticker .tk-move{animation:none; position:static;} .livedot{animation:none;} }
 
 /* KPI tiles */
-.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px;}
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:18px;}
 .kpi{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px;}
-.kpi .k-label{font-size:12.5px; color:var(--muted); font-weight:500;}
-.kpi .k-val{font-size:28px; font-weight:700; margin-top:6px; letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
-.kpi .k-sub{font-size:12px; color:var(--ink2); margin-top:4px; display:flex; align-items:center; gap:6px;}
-.kdot{width:8px;height:8px;border-radius:50%; display:inline-block; flex:none;}
+.kpi .k-label{font-size:11.5px; color:var(--muted); letter-spacing:.6px; text-transform:uppercase; font-weight:600;}
+.kpi .k-val{font-size:30px; font-weight:800; margin-top:6px;}
+.kpi .k-sub{font-size:11.5px; color:var(--ink2); margin-top:4px; display:flex; align-items:center; gap:5px;}
+.kdot{width:8px;height:8px;border-radius:50%; display:inline-block;}
 
 /* badges */
-.badge-st{font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:999px; white-space:nowrap; display:inline-flex; align-items:center; gap:5px;}
-.pr-badge{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; letter-spacing:.02em; white-space:nowrap; border:1px solid transparent; font-variant-numeric:tabular-nums;}
-.pr-badge::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor;}
-.pr-critical{background:rgba(229,72,77,.14); color:#ff8589; border-color:rgba(229,72,77,.35);}
-.pr-high{background:rgba(240,135,79,.13); color:#ffa577; border-color:rgba(240,135,79,.33);}
-.pr-medium{background:rgba(242,179,61,.12); color:#f6c869; border-color:rgba(242,179,61,.3);}
-.pr-low{background:rgba(47,191,113,.12); color:#5ad694; border-color:rgba(47,191,113,.3);}
-.tdot{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:7px; vertical-align:middle; position:relative; top:-1px;}
+.badge-st{font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap; display:inline-flex; align-items:center; gap:5px;}
+.st-pending{background:rgba(250,178,25,.14); color:var(--warn); border:1px solid rgba(250,178,25,.35);}
+.st-dispatched{background:rgba(57,135,229,.14); color:#6db3ff; border:1px solid rgba(57,135,229,.35);}
+.st-inprogress{background:rgba(144,133,233,.14); color:#b0a7f3; border:1px solid rgba(144,133,233,.35);}
+.st-resolved{background:rgba(12,163,12,.14); color:#4cc94c; border:1px solid rgba(12,163,12,.35);}
+.pr-badge{font-size:11px; font-weight:800; padding:3px 9px; border-radius:6px;}
+.pr-critical{background:var(--critical); color:#fff;}
+.pr-high{background:var(--serious); color:#fff;}
+.pr-medium{background:var(--warn); color:#0b0b0b;}
+.pr-low{background:var(--good); color:#fff;}
 
 /* table */
-.toolbar{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center;}
-.toolbar select{width:auto;}
-.search{position:relative;}
-.search .i{position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--muted);}
-.search input{padding-left:34px; width:260px;}
 .tbl-scroll{overflow:auto; border:1px solid var(--border); border-radius:10px;}
-table{width:100%; border-collapse:collapse; font-size:13px; min-width:960px;}
-thead th{position:sticky; top:0; z-index:1; background:var(--panel2); text-align:left; font-size:11.5px; font-weight:600; color:var(--muted); padding:11px 14px; border-bottom:1px solid var(--border2); white-space:nowrap;}
-tbody td{padding:11px 14px; border-bottom:1px solid var(--border); vertical-align:middle;}
-tbody tr:hover{background:rgba(79,140,255,.04);}
+table{width:100%; border-collapse:collapse; font-size:13px; min-width:900px;}
+thead th{position:sticky; top:0; background:var(--panel2); text-align:left; font-size:11px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border2); white-space:nowrap;}
+tbody td{padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle;}
+tbody tr:hover{background:rgba(57,135,229,.05);}
 tbody tr:last-child td{border-bottom:none;}
-td select{padding:6px 28px 6px 10px; font-size:12.5px; width:auto; background-color:var(--panel2);}
-td .sub{color:var(--muted); font-size:12px;}
+td select{padding:5px 8px; font-size:12px; width:auto;}
+.mono{font-variant-numeric:tabular-nums;}
 
 /* map */
-.map-wrap{position:relative; border-radius:10px; overflow:hidden; border:1px solid var(--border); background:#0a121d;}
+.map-wrap{position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:#0a1420;}
 .map-wrap svg{display:block; width:100%; height:auto;}
-.map-legend{display:flex; flex-wrap:wrap; gap:8px 18px; font-size:12px; color:var(--ink2); padding:10px 14px; background:var(--panel2); border-top:1px solid var(--border);}
-.map-legend span{display:inline-flex; align-items:center; gap:7px;}
-.lg-agent{display:inline-flex; width:16px; height:16px; border-radius:50%; background:rgba(79,140,255,.2); border:1px solid rgba(79,140,255,.7); font-size:9px; font-weight:700; color:#cfe0ff; align-items:center; justify-content:center;}
-.map-tip{position:absolute; pointer-events:none; background:rgba(8,12,19,.96); border:1px solid var(--border2); border-radius:8px; padding:9px 12px; font-size:12.5px; color:var(--ink); z-index:20; display:none; max-width:250px; box-shadow:0 10px 30px rgba(0,0,0,.5); line-height:1.55;}
-.zone-label{font-size:11px; fill:#8c9ab0; pointer-events:none; font-weight:500; font-family:var(--font);}
-.water-label{font-size:11px; fill:#4c78a6; letter-spacing:3px; pointer-events:none; font-weight:600; font-family:var(--font);}
-.agent-glyph{font-family:var(--font); font-weight:700; font-size:9.5px; fill:#e3ecff;}
+.map-legend{display:flex; flex-wrap:wrap; gap:14px; font-size:11.5px; color:var(--ink2); padding:10px 14px; background:var(--panel2); border-top:1px solid var(--border);}
+.map-legend span{display:inline-flex; align-items:center; gap:6px;}
+.map-tip{position:absolute; pointer-events:none; background:#0b0f16; border:1px solid var(--border2); border-radius:8px; padding:8px 12px; font-size:12px; color:var(--ink); z-index:20; display:none; max-width:240px; box-shadow:0 8px 24px rgba(0,0,0,.5); line-height:1.5;}
+.zone-label{font-size:11px; fill:#9aa7b8; pointer-events:none; font-weight:600;}
+.water-label{font-size:12px; fill:#4a7aa8; font-style:italic; letter-spacing:2px; pointer-events:none;}
 
 /* charts */
-.chart-tip{position:absolute; pointer-events:none; background:rgba(8,12,19,.96); border:1px solid var(--border2); border-radius:7px; padding:6px 10px; font-size:12px; z-index:30; display:none; box-shadow:0 8px 24px rgba(0,0,0,.5); white-space:nowrap;}
+.chart-tip{position:absolute; pointer-events:none; background:#0b0f16; border:1px solid var(--border2); border-radius:8px; padding:7px 11px; font-size:12px; z-index:30; display:none; box-shadow:0 8px 24px rgba(0,0,0,.5); white-space:nowrap;}
 .chart-host{position:relative;}
 
 /* tabs */
-.tabs{display:inline-flex; gap:4px; margin-bottom:20px; padding:4px; background:var(--panel); border:1px solid var(--border); border-radius:10px; flex-wrap:wrap;}
-.tab{display:inline-flex; align-items:center; gap:8px; background:none; border:none; color:var(--muted); font-size:13px; font-weight:600; padding:8px 14px; border-radius:7px; transition:background .15s, color .15s;}
-.tab .i{width:15px; height:15px;}
-.tab.active{color:var(--ink); background:var(--surface); box-shadow:0 1px 2px rgba(0,0,0,.3);}
-.tab:hover:not(.active){color:var(--ink);}
+.tabs{display:flex; gap:6px; margin-bottom:18px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
+.tab{background:none; border:none; color:var(--muted); font-size:13.5px; font-weight:600; padding:10px 16px; border-bottom:2px solid transparent; margin-bottom:-1px;}
+.tab.active{color:var(--ink); border-bottom-color:var(--accent);}
+.tab:hover{color:var(--ink);}
 
 /* citizen form */
-.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
 .form-grid .full{grid-column:1 / -1;}
-@media (max-width:760px){.form-grid{grid-template-columns:1fr;}}
-@media (max-width:1100px){.layout-2{grid-template-columns:1fr !important;} .grid.cols-2{grid-template-columns:1fr !important;} .grid.cols-2 > .card{grid-column:auto !important;}}
-.sev-row{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
-@media (max-width:480px){.sev-row{grid-template-columns:1fr 1fr;}}
-.sev-opt{text-align:center; padding:9px 4px; border:1px solid var(--border2); border-radius:var(--radius-sm); font-size:13px; font-weight:500; color:var(--ink2); background:var(--bg2); transition:all .15s;}
-.sev-opt:hover{border-color:var(--ink2); color:var(--ink);}
-.sev-opt.sel-1{border-color:var(--good); color:#5ad694; background:rgba(47,191,113,.1);}
-.sev-opt.sel-2{border-color:var(--warn); color:#f6c869; background:rgba(242,179,61,.1);}
-.sev-opt.sel-3{border-color:var(--serious); color:#ffa577; background:rgba(240,135,79,.1);}
-.sev-opt.sel-4{border-color:var(--critical); color:#ff8589; background:rgba(229,72,77,.12);}
-.score-preview{display:flex; align-items:center; justify-content:space-between; gap:14px; background:var(--bg2); border:1px dashed var(--border2); border-radius:10px; padding:14px 16px;}
-.score-preview .sp-label{font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:.04em; display:flex; align-items:center; gap:6px;}
-.toast{position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); display:flex; align-items:center; gap:10px; max-width:min(560px, calc(100vw - 32px)); background:#0f1a14; border:1px solid rgba(47,191,113,.4); color:#c9f0da; padding:12px 18px; border-radius:10px; font-size:13.5px; font-weight:500; opacity:0; transition:all .3s; z-index:200; pointer-events:none; box-shadow:0 12px 32px rgba(0,0,0,.5);}
-.toast::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--good); flex:none;}
+@media (max-width:760px){.form-grid{grid-template-columns:1fr;} .layout-2{grid-template-columns:1fr !important;}}
+.sev-row{display:flex; gap:8px;}
+.sev-opt{flex:1; text-align:center; padding:9px 4px; border:1px solid var(--border2); border-radius:8px; font-size:12.5px; font-weight:600; color:var(--ink2); background:var(--panel2); transition:all .15s;}
+.sev-opt.sel-1{border-color:var(--good); color:var(--good); background:rgba(12,163,12,.1);}
+.sev-opt.sel-2{border-color:var(--warn); color:var(--warn); background:rgba(250,178,25,.1);}
+.sev-opt.sel-3{border-color:var(--serious); color:var(--serious); background:rgba(236,131,90,.1);}
+.sev-opt.sel-4{border-color:var(--critical); color:#f08a8a; background:rgba(208,59,59,.12);}
+.score-preview{display:flex; align-items:center; justify-content:space-between; background:var(--panel2); border:1px solid var(--border2); border-radius:10px; padding:12px 16px;}
+.toast{position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); background:#10351c; border:1px solid rgba(12,163,12,.5); color:#5ad55a; padding:12px 22px; border-radius:10px; font-size:14px; font-weight:600; opacity:0; transition:all .3s; z-index:200; pointer-events:none;}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
-.toast.err{background:#1d1012; border-color:rgba(229,72,77,.45); color:#ffc9cb;}
-.toast.err::before{background:var(--critical);}
+.toast.err{background:#3a1515; border-color:rgba(208,59,59,.5); color:#f08a8a;}
 
-.c-complaint{border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; background:var(--bg2);}
+.c-complaint{border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; background:var(--panel2);}
 .c-complaint .c-top{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
-.c-complaint h4{font-size:13.5px; font-weight:600;}
+.c-complaint h4{font-size:14px;}
 .c-complaint .c-meta{font-size:12px; color:var(--muted); margin-top:5px;}
-.steps{display:flex; align-items:center; gap:0; margin-top:14px;}
-.step{flex:1; text-align:center; font-size:11px; color:var(--muted); position:relative; padding-top:16px;}
-.step::before{content:""; position:absolute; top:3px; left:50%; transform:translateX(-50%); width:10px; height:10px; border-radius:50%; background:var(--panel2); border:2px solid var(--border2); z-index:1;}
-.step::after{content:""; position:absolute; top:8px; left:50%; width:100%; height:2px; background:var(--border2);}
+.steps{display:flex; align-items:center; gap:0; margin-top:12px;}
+.step{flex:1; text-align:center; font-size:10.5px; color:var(--muted); position:relative; padding-top:14px;}
+.step::before{content:""; position:absolute; top:4px; left:50%; transform:translateX(-50%); width:9px; height:9px; border-radius:50%; background:var(--border2);}
+.step::after{content:""; position:absolute; top:8px; left:calc(50% + 8px); right:calc(-50% + 8px); height:2px; background:var(--border);}
 .step:last-child::after{display:none;}
 .step.done{color:var(--ink2);}
-.step.done::before{background:var(--good); border-color:var(--good);}
-.step.done::after{background:rgba(47,191,113,.5);}
-.empty{display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; padding:24px 12px; color:var(--muted); font-size:13px; border:1px dashed var(--border2); border-radius:10px;}
-.empty .i{width:22px; height:22px;}
-
-.advisory{list-style:none; display:flex; flex-direction:column; gap:10px; font-size:13px; color:var(--ink2); line-height:1.55;}
-.advisory li{display:flex; gap:10px;}
-.advisory li::before{content:""; width:5px; height:5px; border-radius:50%; background:var(--muted); margin-top:8px; flex:none;}
-.helplines{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px;}
-.helplines div{background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center;}
-.helplines b{display:block; font-family:var(--mono); font-size:14px; color:var(--ink);}
-.helplines span{font-size:11px; color:var(--muted);}
+.step.done::before{background:var(--good);}
+.step.done::after{background:rgba(12,163,12,.45);}
 
 /* dataset cards */
-.ds-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px;}
-.ds-card{background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:18px; position:relative; overflow:hidden;}
-.ds-card::before{content:""; position:absolute; left:0; top:0; right:0; height:3px; background:var(--dc,#4f8cff);}
-.ds-card h4{font-size:14.5px; font-weight:600; margin-top:4px;}
-.ds-card .ds-yr{font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:.06em;}
-.ds-card p{font-size:12.5px; color:var(--ink2); line-height:1.6; margin-top:8px;}
-.ds-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border);}
-.ds-stats div b{display:block; font-size:14.5px; font-weight:700;}
-.ds-stats div span{font-size:11px; color:var(--muted);}
+.ds-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px;}
+.ds-card{background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:16px; border-left:3px solid var(--s1);}
+.ds-card h4{font-size:14px; margin-bottom:2px;}
+.ds-card .ds-yr{font-size:11px; color:var(--muted); font-weight:700; letter-spacing:1px;}
+.ds-card p{font-size:12.5px; color:var(--ink2); line-height:1.55; margin-top:8px;}
+.ds-stats{display:flex; gap:16px; margin-top:10px; flex-wrap:wrap;}
+.ds-stats div b{display:block; font-size:16px;}
+.ds-stats div span{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;}
 
 .layout-2{display:grid; grid-template-columns:1.6fr 1fr; gap:18px; align-items:start;}
-.agent-row{display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px;}
+.agent-row{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:13px;}
 .agent-row:last-child{border-bottom:none;}
-.agent-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center; background:var(--panel2); border:1px solid var(--border2); color:var(--ink2); flex:none;}
+.agent-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px; background:var(--panel2); border:1px solid var(--border2);}
 .agent-row .a-name{font-weight:600;}
-.agent-row .a-sub{font-size:12px; color:var(--muted);}
-.a-state{margin-left:auto; font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;}
-.a-state::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor;}
-.a-busy{background:rgba(240,135,79,.12); color:#ffa577;}
-.a-free{background:rgba(47,191,113,.12); color:#5ad694;}
-.rank{font-family:var(--mono); font-size:12px; font-weight:600; color:var(--muted);}
-
+.agent-row .a-sub{font-size:11.5px; color:var(--muted);}
+.a-state{margin-left:auto; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px;}
+.a-busy{background:rgba(217,89,38,.15); color:#f09468;}
+.a-free{background:rgba(12,163,12,.14); color:#4cc94c;}
 /* notifications */
-.iconbtn{position:relative; background:none; border:1px solid var(--border2); border-radius:8px; width:36px; height:36px; color:var(--ink2); display:flex; align-items:center; justify-content:center; transition:border-color .15s, color .15s;}
-.iconbtn:hover{border-color:var(--ink2); color:var(--ink);}
-.iconbtn .nbadge{position:absolute; top:-6px; right:-6px; background:var(--critical); color:#fff; font-size:10px; font-weight:700; min-width:18px; height:18px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px; border:2px solid var(--bg2);}
-.notif-panel{position:fixed; top:66px; right:18px; width:min(370px, calc(100vw - 24px)); max-height:460px; overflow:auto; background:var(--panel); border:1px solid var(--border2); border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.6); z-index:120; display:none;}
+.bell{position:relative; background:none; border:1px solid var(--border2); border-radius:8px; width:36px; height:36px; font-size:16px; color:var(--ink); display:flex; align-items:center; justify-content:center;}
+.bell:hover{border-color:var(--accent);}
+.bell .nbadge{position:absolute; top:-7px; right:-7px; background:var(--critical); color:#fff; font-size:10px; font-weight:800; min-width:17px; height:17px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px; border:2px solid var(--panel);}
+.notif-panel{position:fixed; top:62px; right:18px; width:350px; max-height:440px; overflow:auto; background:var(--panel); border:1px solid var(--border2); border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,.6); z-index:120; display:none;}
 .notif-panel.open{display:block;}
-.notif-head{display:flex; justify-content:space-between; align-items:center; padding:13px 16px; border-bottom:1px solid var(--border); font-size:13.5px; font-weight:600; position:sticky; top:0; background:var(--panel);}
-.notif-head button{background:none; border:none; color:var(--accent); font-size:12px; font-weight:600;}
-.notif-item{padding:12px 16px; border-bottom:1px solid var(--border); font-size:13px; display:flex; gap:12px; line-height:1.5; color:var(--ink2);}
+.notif-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700;}
+.notif-head button{background:none; border:none; color:var(--accent); font-size:11.5px; font-weight:600;}
+.notif-item{padding:11px 14px; border-bottom:1px solid var(--border); font-size:12.5px; display:flex; gap:10px; line-height:1.5; color:var(--ink2);}
 .notif-item:last-child{border-bottom:none;}
-.notif-item.unread{background:rgba(79,140,255,.06); color:var(--ink);}
-.notif-item .n-ic{width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex:none; background:var(--panel2); border:1px solid var(--border2); color:var(--ink2);}
-.notif-item .n-time{color:var(--muted); font-size:11.5px; margin-top:3px;}
-.notif-empty{padding:30px 18px; text-align:center; color:var(--muted); font-size:13px; line-height:1.6;}
-footer{max-width:1480px; margin:0 auto; padding:22px 24px 30px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--muted); border-top:1px solid var(--border);}
+.notif-item.unread{background:rgba(57,135,229,.08); color:var(--ink);}
+.notif-item .n-ic{font-size:18px; flex:none;}
+.notif-item .n-time{color:var(--muted); font-size:11px; margin-top:2px;}
+.notif-empty{padding:26px 14px; text-align:center; color:var(--muted); font-size:12.5px;}
+.st-accepted{background:rgba(25,158,112,.14); color:#4ad2a0; border:1px solid rgba(25,158,112,.35);}
+.flag{font-size:10.5px; font-weight:800; padding:2px 7px; border-radius:6px; background:rgba(250,178,25,.15); color:var(--warn); border:1px solid rgba(250,178,25,.4); margin-left:6px; white-space:nowrap;}
+.ovr{font-size:10.5px; font-weight:800; color:#b0a7f3; margin-left:5px;}
+/* sim control bar */
+.simbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:18px; font-size:12.5px; color:var(--ink2);}
+.simbar .sb-label{font-size:11px; font-weight:800; letter-spacing:1px; color:#b0a7f3; margin-right:4px;}
+.simbar .tgl{display:inline-flex; align-items:center; gap:6px; margin:0; font-size:12.5px; font-weight:600; color:var(--ink2);}
+.simbar .tgl input{width:auto; accent-color:var(--accent);}
+.clickrow{cursor:pointer; border-radius:8px;}
+.clickrow:hover{background:rgba(57,135,229,.06);}
+/* modal */
+.modal-bg{position:fixed; inset:0; background:rgba(4,7,12,.72); z-index:150; display:none; align-items:flex-start; justify-content:center; padding:40px 16px; overflow:auto;}
+.modal-bg.open{display:flex;}
+.modal{width:760px; max-width:100%; background:var(--panel); border:1px solid var(--border2); border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.6);}
+.m-head{display:flex; align-items:center; gap:10px; padding:16px 20px; border-bottom:1px solid var(--border);}
+.m-head h3{font-size:16px;}
+.m-x{margin-left:auto; background:none; border:1px solid var(--border2); color:var(--ink2); border-radius:8px; width:32px; height:32px; font-size:16px;}
+.m-body{padding:18px 20px; display:grid; gap:16px;}
+.m-sec{background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:14px 16px;}
+.m-sec h4{font-size:11px; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); margin-bottom:10px;}
+.m-facts{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; font-size:13px;}
+.m-facts span{display:block; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:2px;}
+.m-desc{margin-top:10px; font-size:13px; color:var(--ink2); line-height:1.5;}
+.bd{width:100%; min-width:0; font-size:12.5px;}
+.bd td{padding:5px 0; border-bottom:1px dashed var(--border);}
+.bd td:last-child{text-align:right; font-variant-numeric:tabular-nums;}
+.bd tr.tot td{border-bottom:none; font-weight:800; padding-top:8px;}
+.m-actions{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px;}
+.m-actions select, .m-actions input{width:auto;}
+.warnbox{background:rgba(250,178,25,.08); border:1px solid rgba(250,178,25,.35); border-radius:10px; padding:12px 14px; font-size:13px; color:var(--ink);}
+.okbox{background:rgba(12,163,12,.08); border:1px solid rgba(12,163,12,.35); border-radius:10px; padding:12px 14px; font-size:13px;}
+.tl{font-size:12.5px; color:var(--ink2);}
+.tl div{padding:6px 0; border-bottom:1px solid var(--border); display:flex; gap:10px;}
+.tl div:last-child{border-bottom:none;}
+.tl .tl-t{color:var(--muted); font-variant-numeric:tabular-nums; flex:none; width:96px; white-space:nowrap;}
+.tl b{color:var(--ink);}
+@media (max-width:760px){.m-facts{grid-template-columns:1fr 1fr;}}
+footer{padding:26px; text-align:center; font-size:12px; color:var(--muted); line-height:1.7;}
+footer a{color:var(--accent); text-decoration:none;}
 </style>
 </head>
 <body>
 
-<!-- Icon sprite -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-logo" viewBox="0 0 24 24"><path d="M12 2.5 3 20.5l9-4.2 9 4.2z"/><path d="M12 7.5v8.8" stroke="rgba(0,0,0,.25)" stroke-width="1.6" fill="none"/></symbol>
-  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></symbol>
-  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
-  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
-  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M16 16l4-4-4-4M20 12H9"/></symbol>
-  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
-  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
-  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V11M10 20V5M16 20v-6M2 20h20"/></symbol>
-  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></symbol>
-  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
-  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
-  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></symbol>
-  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
-  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
-  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M2 6h12v10H2zM14 10h4l4 3v3h-8z"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
-  <symbol id="i-boat" viewBox="0 0 24 24"><path d="M3 14h18l-2.5 5h-13z"/><path d="M12 3v11M12 4l6 8h-6"/></symbol>
-  <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="3" y="11" width="18" height="6" rx="2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></symbol>
-  <symbol id="i-ambulance" viewBox="0 0 24 24"><path d="M2 7h12v9H2zM14 10h4l4 3v3h-8z"/><path d="M8 9.5v4M6 11.5h4"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
-  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 8-6-16-3 8H2"/></symbol>
-  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.3L3 16M3 21v-5h5"/></symbol>
-  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
-  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9.5 9.5h5v5h-5zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
-  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2.4.6 4 2.4 4 5.5"/></symbol>
-  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
-  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></symbol>
-  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
-  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></symbol>
-  <symbol id="i-lifebuoy" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="m5.6 5.6 3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6"/></symbol>
-  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></symbol>
-</svg>
-
 <!-- ================= LANDING ================= -->
 <div id="landing">
-  <header class="l-nav">
-    <a class="brandmark" href="#" onclick="return false;">
-      <span class="mark"><svg><use href="#i-logo"/></svg></span>
-      <span class="word">AQUILA<small>Disaster Response Coordinator</small></span>
-    </a>
-    <span class="spacer"></span>
-    <nav class="navlinks"><a href="#features">Platform</a><a href="#access">Access</a></nav>
-    <span class="pill"><span class="livedot"></span>Chennai · Live prototype</span>
-  </header>
-
-  <main class="l-main">
-    <section class="l-hero">
-      <span class="eyebrow"><svg class="i"><use href="#i-layers"/></svg>Multi-agent disaster response</span>
-      <h1>Coordinated flood response for <span>Chennai</span>, in real time.</h1>
-      <p class="lead">Aquila connects citizen reports, a live city digital twin and AI rescue-priority scoring, so command teams can dispatch the right rescue unit to the right street, faster.</p>
-      <div class="l-stats">
-        <div><b>23</b><span>City zones monitored</span></div>
-        <div><b>7</b><span>Rescue agents in fleet</span></div>
-        <div><b>6</b><span>Historical events calibrated</span></div>
-      </div>
-    </section>
-
-    <section class="access" id="access">
-      <div class="access-card">
-        <div class="ac-head">
-          <div class="ic-tile teal"><svg class="i lg"><use href="#i-user"/></svg></div>
-          <div>
-            <h3>Citizen Portal</h3>
-            <p>Report floods, rescue needs and emergencies, then follow your request until it is resolved.</p>
-          </div>
-        </div>
-        <label for="citizenName">Your name</label>
-        <div class="ac-row">
-          <input id="citizenName" placeholder="e.g. Priya Raman" maxlength="40" onkeydown="if(event.key==='Enter')enterCitizen()">
-          <button class="btn teal" onclick="enterCitizen()">Continue<svg class="i"><use href="#i-arrow"/></svg></button>
-        </div>
-      </div>
-      <div class="access-card">
-        <div class="ac-head">
-          <div class="ic-tile blue"><svg class="i lg"><use href="#i-shield"/></svg></div>
-          <div>
-            <h3>Command Center</h3>
-            <p>Complaints register, AI priority queue, fleet coordination, analytics and the live digital twin.</p>
-          </div>
-        </div>
-        <div id="adminAuth">
-          <label for="adminPass">Admin passcode</label>
-          <div class="ac-row">
-            <input id="adminPass" type="password" placeholder="Enter passcode" onkeydown="if(event.key==='Enter')enterAdmin()">
-            <button class="btn" onclick="enterAdmin()">Sign in<svg class="i"><use href="#i-arrow"/></svg></button>
-          </div>
-          <div class="hint"><svg class="i" style="width:14px;height:14px"><use href="#i-lock"/></svg>Demo passcode: <code>aquila2026</code></div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <section class="l-features" id="features">
-    <div class="inner">
-      <div class="feat"><div class="ic-tile blue"><svg class="i lg"><use href="#i-map"/></svg></div><h4>City digital twin</h4><p>A live map of zones, rivers, marshland and roads, with active incidents and moving rescue units.</p></div>
-      <div class="feat"><div class="ic-tile amber"><svg class="i lg"><use href="#i-cpu"/></svg></div><h4>AI priority scoring</h4><p>Every report is scored on severity, people affected, water depth and historical zone risk.</p></div>
-      <div class="feat"><div class="ic-tile red"><svg class="i lg"><use href="#i-truck"/></svg></div><h4>Agent dispatch</h4><p>Boats, trucks, cars and ambulances are matched to incidents and re-routed as priorities change.</p></div>
-      <div class="feat"><div class="ic-tile teal"><svg class="i lg"><use href="#i-bell"/></svg></div><h4>Citizen updates</h4><p>Reporters get notified at every step, from receipt and dispatch through to resolution.</p></div>
+  <div class="logo">AQUILA</div>
+  <div class="sub">Multi-Agent Disaster Response Coordinator for Chennai — combining a city Digital Twin, citizen reporting, AI rescue-priority scoring and coordinated agent dispatch.</div>
+  <span class="badge">TEAM CLOVERS · CODE 9EB24C · PROTOTYPE DEMO</span>
+  <div class="rolecards">
+    <div class="rolecard">
+      <div class="ric" style="background:rgba(25,158,112,.15); border:1px solid rgba(25,158,112,.4);">🧍</div>
+      <h3>Citizen Portal</h3>
+      <p>Report floods, rescue needs and emergencies. Track the status of your complaint and view live flood conditions across Chennai.</p>
+      <label>Your name</label>
+      <input id="citizenName" placeholder="e.g. Priya Raman" maxlength="40">
+      <button class="btn" style="margin-top:14px; background:#199e70;" onclick="enterCitizen()">Enter Citizen Dashboard →</button>
     </div>
-  </section>
-
-  <div class="l-foot">
-    <span>© 2026 Aquila · Team Clovers · Code 9EB24C</span>
-    <span>Prototype demonstration · Simulated operational data</span>
+    <div class="rolecard">
+      <div class="ric" style="background:rgba(208,59,59,.13); border:1px solid rgba(208,59,59,.4);">🛡️</div>
+      <h3>Admin Command Center</h3>
+      <p>View the complaints register, AI priority queue, rescue-agent fleet, historical disaster datasets and the live city digital twin.</p>
+      <div id="adminAuth">
+        <label>Admin email</label>
+        <input id="adminEmail" type="email" placeholder="name@aquila.demo" maxlength="80" autocomplete="username" style="margin-bottom:12px;">
+        <label>Password</label>
+        <input id="adminPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')enterAdmin()">
+      </div>
+      <button class="btn" style="margin-top:14px;" onclick="enterAdmin()">Enter Command Center →</button>
+    </div>
   </div>
 </div>
 
 <!-- ================= CITIZEN SHELL ================= -->
 <div class="shell" id="citizenShell">
   <div class="topbar">
-    <span class="brandmark"><span class="mark"><svg><use href="#i-logo"/></svg></span><span class="word">AQUILA</span></span>
-    <span class="divider"></span>
-    <span class="rolechip citizen"><span class="rdot"></span>Citizen Portal</span>
+    <span class="brand">AQUILA</span>
+    <span class="rolechip citizen">CITIZEN PORTAL</span>
     <span class="spacer"></span>
-    <span class="livechip"><span class="livedot"></span>Live</span>
+    <span class="livechip"><span class="livedot"></span>Simulated feed</span>
     <span class="clock" data-clock></span>
-    <button class="iconbtn" onclick="toggleNotifs(event)" title="Notifications" aria-label="Notifications"><svg class="i"><use href="#i-bell"/></svg><span class="nbadge hidden" id="nbadge"></span></button>
-    <span class="userchip"><span class="avatar" id="userAvatar">G</span><span class="uname" id="userName"></span></span>
-    <button class="btn ghost sm" onclick="logout()"><svg class="i"><use href="#i-logout"/></svg>Sign out</button>
+    <button class="bell" onclick="toggleNotifs(event)" title="Notifications">🔔<span class="nbadge hidden" id="nbadge"></span></button>
+    <button class="btn ghost sm" onclick="logout()">Sign out</button>
   </div>
   <div class="notif-panel" id="notifPanel">
-    <div class="notif-head"><span>Notifications</span><button onclick="markAllRead()">Mark all as read</button></div>
+    <div class="notif-head"><span>🔔 Notifications</span><button onclick="markAllRead()">Mark all read</button></div>
     <div id="notifList"></div>
   </div>
   <div class="wrap">
     <div class="ticker">
-      <span class="tk-label"><svg class="i" style="width:13px;height:13px"><use href="#i-alert"/></svg>Alerts</span>
+      <span class="tk-label">⚠ ALERTS · SIMULATED</span>
       <div class="tk-track"><div class="tk-move" data-tickertext></div></div>
-    </div>
-
-    <div class="page-head">
-      <div><h1>Report an emergency</h1><p>Your report is scored instantly and routed to the nearest available rescue unit.</p></div>
     </div>
 
     <div class="layout-2">
       <div>
         <div class="card" style="margin-bottom:18px;">
-          <h2><svg class="i"><use href="#i-file"/></svg>New emergency report</h2>
-          <div class="cap">Reports feed the city digital twin and are scored by the AI rescue-priority engine.</div>
+          <h2>📝 Register a Complaint / Emergency Request</h2>
+          <div class="cap">Reports feed the Digital Twin and are reviewed by a command-center officer before dispatch.</div>
           <div class="form-grid">
-            <div><label for="fName">Reporter name</label><input id="fName" placeholder="Full name"></div>
-            <div><label for="fPhone">Mobile number</label><input id="fPhone" placeholder="10-digit mobile" maxlength="10" inputmode="numeric"></div>
-            <div><label for="fZone">Area / zone</label><select id="fZone"></select></div>
-            <div><label for="fType">Emergency type</label>
+            <div><label>Reporter name</label><input id="fName" placeholder="Full name"></div>
+            <div><label>Phone</label><input id="fPhone" placeholder="10-digit mobile" maxlength="10" inputmode="numeric"></div>
+            <div><label>Area / Zone</label><select id="fZone"></select></div>
+            <div><label>Emergency type</label>
               <select id="fType">
-                <option value="flood">Flooding / water entry</option>
-                <option value="rescue">Rescue needed (trapped)</option>
-                <option value="waterlogging">Waterlogging / road blocked</option>
-                <option value="medical">Medical emergency</option>
-                <option value="power">Power outage / electrical hazard</option>
-                <option value="tree">Tree fall / structural damage</option>
-                <option value="relief">Food / relief supplies needed</option>
+                <option value="flood">🌊 Flooding / Water entry</option>
+                <option value="rescue">🚨 Rescue needed (trapped)</option>
+                <option value="waterlogging">💧 Waterlogging / Road blocked</option>
+                <option value="medical">🏥 Medical emergency</option>
+                <option value="power">⚡ Power outage / Electrical hazard</option>
+                <option value="tree">🌳 Tree fall / Structure damage</option>
+                <option value="relief">🍚 Food / Relief supplies needed</option>
               </select>
             </div>
-            <div><label for="fPeople">People affected</label><input id="fPeople" type="number" min="1" max="500" value="2"></div>
-            <div><label for="fDepth">Approximate water depth</label>
+            <div><label>People affected</label><input id="fPeople" type="number" min="1" max="500" value="2"></div>
+            <div><label>Approx. water depth</label>
               <select id="fDepth">
-                <option value="0">None / not applicable</option>
+                <option value="0">None / Not applicable</option>
                 <option value="1">Ankle deep (&lt; 0.5 ft)</option>
                 <option value="2">Knee deep (1–2 ft)</option>
                 <option value="3">Waist deep (2–4 ft)</option>
                 <option value="4">Chest deep or more (4 ft +)</option>
               </select>
             </div>
-            <div class="full"><label>Severity (your assessment)</label>
-              <div class="sev-row" id="sevRow">
-                <button class="sev-opt" data-sev="1">Low</button>
-                <button class="sev-opt" data-sev="2">Moderate</button>
-                <button class="sev-opt" data-sev="3">High</button>
-                <button class="sev-opt" data-sev="4">Life-threatening</button>
-              </div>
-            </div>
-            <div class="full"><label for="fDesc">Description</label><textarea id="fDesc" rows="3" placeholder="Landmark, number of people, special needs (elderly, children, medical)…"></textarea></div>
-            <div class="full score-preview">
-              <div>
-                <div class="sp-label"><svg class="i" style="width:14px;height:14px"><use href="#i-cpu"/></svg>AI PRIORITY PREVIEW</div>
-                <div style="font-size:13px; color:var(--ink2); margin-top:4px;" id="scoreExplain">Fill the form to see the computed rescue priority.</div>
-              </div>
-              <div id="scorePreviewBadge"></div>
-            </div>
-            <div class="full"><button class="btn teal block" style="padding:12px 18px;" onclick="submitComplaint()"><svg class="i"><use href="#i-send"/></svg>Submit emergency report</button></div>
+            <div class="full"><label>Description</label><textarea id="fDesc" rows="2" placeholder="Landmark, number of people, special needs (elderly, children, medical)…"></textarea></div>
+            <div class="full hint" style="margin-top:0;">The command center assesses the urgency of every report from the details above and dispatches help in order of need.</div>
+            <div class="full"><button class="btn" style="width:100%; justify-content:center; background:#199e70;" onclick="submitComplaint()">🚨 Submit Emergency Report</button></div>
           </div>
         </div>
 
         <div class="card">
-          <h2><svg class="i"><use href="#i-map"/></svg>Live city map: flood conditions</h2>
-          <div class="cap">Digital twin view · pulsing markers are active reports · moving units are rescue agents</div>
+          <h2>🗺️ Live City Map — Flood Conditions</h2>
+          <div class="cap">Digital Twin view · pulsing markers = active reports · moving units = rescue vehicles travelling to their assigned incident</div>
           <div class="map-wrap" id="citizenMapWrap"></div>
         </div>
       </div>
 
       <div>
         <div class="card" style="margin-bottom:18px;">
-          <h2><svg class="i"><use href="#i-folder"/></svg>My reports</h2>
+          <h2>📂 My Complaints</h2>
           <div class="cap" id="myCount">No reports yet.</div>
           <div id="myComplaints"></div>
         </div>
         <div class="card">
-          <h2><svg class="i"><use href="#i-info"/></svg>Safety advisory</h2>
-          <div class="cap">Greater Chennai Corporation · NDMA flood guidance</div>
-          <ul class="advisory">
-            <li>Move to higher floors if water is rising; do not wade through moving water above knee level.</li>
-            <li>Switch off mains power if water enters your home.</li>
-            <li>Keep documents in waterproof bags and store drinking water.</li>
-          </ul>
-          <div class="helplines">
-            <div><b>112</b><span>State emergency</span></div>
-            <div><b>1913</b><span>Chennai Corp.</span></div>
-            <div><b>011-24363260</b><span>NDRF</span></div>
+          <h2>📒 Safety Advisory</h2>
+          <div class="cap">Chennai Corporation · NDMA flood guidance</div>
+          <div style="font-size:13px; color:var(--ink2); line-height:1.8;">
+            • Move to higher floors if water is rising; do not wade through moving water above knee level.<br>
+            • Switch off mains power if water enters your home.<br>
+            • Keep documents in waterproof bags; store drinking water.<br>
+            • State Emergency: <b>112</b> · Chennai Corporation: <b>1913</b> · NDRF: <b>011-24363260</b>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <footer><span>© 2026 Aquila · Team Clovers</span><span>Prototype · Simulated data for demonstration</span></footer>
+  <footer>Aquila prototype · Team Clovers · Simulated data for demonstration</footer>
 </div>
 
 <!-- ================= ADMIN SHELL ================= -->
 <div class="shell" id="adminShell">
   <div class="topbar">
-    <span class="brandmark"><span class="mark"><svg><use href="#i-logo"/></svg></span><span class="word">AQUILA</span></span>
-    <span class="divider"></span>
-    <span class="rolechip admin"><span class="rdot"></span>Command Center</span>
+    <span class="brand">AQUILA</span>
+    <span class="rolechip admin">ADMIN · COMMAND CENTER</span>
     <span class="spacer"></span>
-    <span class="livechip"><span class="livedot"></span>Digital twin live</span>
+    <span class="livechip"><span class="livedot"></span>Digital Twin · Simulation</span>
+    <span class="clock" id="adminWho" style="color:#f08a8a;"></span>
     <span class="clock" data-clock></span>
-    <span class="userchip"><span class="avatar">OP</span><span class="uname">Duty officer</span></span>
-    <button class="btn ghost sm" onclick="logout()"><svg class="i"><use href="#i-logout"/></svg>Sign out</button>
+    <button class="btn ghost sm" onclick="logout()">Sign out</button>
   </div>
   <div class="wrap">
     <div class="ticker">
-      <span class="tk-label"><svg class="i" style="width:13px;height:13px"><use href="#i-alert"/></svg>Alerts</span>
+      <span class="tk-label">⚠ ALERTS · SIMULATED</span>
       <div class="tk-track"><div class="tk-move" data-tickertext></div></div>
     </div>
 
-    <div class="page-head">
-      <div><h1>Operations overview</h1><p>Northeast monsoon response · Greater Chennai</p></div>
+    <div class="simbar">
+      <span class="sb-label">SIMULATION</span>
+      <button class="btn sm" id="scenarioBtn" onclick="runScenario()">▶ Run Michaung-style scenario (18 reports)</button>
+      <button class="btn ghost sm" onclick="advanceField(true)">⏭ Advance field crews one step</button>
+      <label class="tgl"><input type="checkbox" id="autoAdvance"> Auto-advance crews every 10 s</label>
+      <span class="spacer" style="flex:1;"></span>
+      <span id="simStatus" style="color:var(--muted);">Field-crew actions are simulated; every dispatch needs officer approval.</span>
     </div>
 
     <div class="kpis" id="kpiRow"></div>
 
-    <div class="tabs" role="tablist">
-      <button class="tab active" data-tab="ops"><svg class="i"><use href="#i-map"/></svg>Live operations</button>
-      <button class="tab" data-tab="register"><svg class="i"><use href="#i-list"/></svg>Complaints register</button>
-      <button class="tab" data-tab="analytics"><svg class="i"><use href="#i-chart"/></svg>Analytics</button>
-      <button class="tab" data-tab="history"><svg class="i"><use href="#i-history"/></svg>Disaster datasets</button>
+    <div class="tabs">
+      <button class="tab active" data-tab="ops">🗺️ Live Operations</button>
+      <button class="tab" data-tab="register">📋 Complaints Register</button>
+      <button class="tab" data-tab="analytics">📊 Analytics</button>
+      <button class="tab" data-tab="audit">🧾 Audit Log</button>
+      <button class="tab" data-tab="history">🌀 Chennai Disaster Datasets</button>
     </div>
 
     <!-- OPS TAB -->
     <div class="tabpane" id="tab-ops">
       <div class="layout-2">
         <div class="card">
-          <h2><svg class="i"><use href="#i-map"/></svg>Chennai digital twin</h2>
-          <div class="cap">Hover an incident marker for details · rescue agents re-plan routes as tasks are assigned</div>
+          <h2>🗺️ Chennai Digital Twin — Live Operations Map</h2>
+          <div class="cap">Click an incident marker to review it · vehicles travel to their assigned incident (straight-line movement in this prototype)</div>
           <div class="map-wrap" id="adminMapWrap"></div>
         </div>
         <div>
           <div class="card" style="margin-bottom:18px;">
-            <h2><svg class="i"><use href="#i-truck"/></svg>Rescue agent fleet</h2>
-            <div class="cap">Multi-agent coordination · resource bidding</div>
+            <h2>🚁 Rescue Agent Fleet</h2>
+            <div class="cap">Rule-based matching · one active task per vehicle</div>
             <div id="fleetList"></div>
           </div>
           <div class="card">
-            <h2><svg class="i"><use href="#i-target"/></svg>AI priority queue</h2>
-            <div class="cap">Top unresolved incidents by rescue-priority score</div>
+            <h2>🎯 AI Priority Queue</h2>
+            <div class="cap">Items needing an officer decision first, then by final priority · click a row</div>
             <div id="priorityQueue"></div>
           </div>
         </div>
@@ -566,25 +406,26 @@ footer{max-width:1480px; margin:0 auto; padding:22px 24px 30px; display:flex; ju
     <!-- REGISTER TAB -->
     <div class="tabpane hidden" id="tab-register">
       <div class="card">
-        <h2><svg class="i"><use href="#i-list"/></svg>Complaints register</h2>
-        <div class="cap">All citizen reports · update status and assign rescue agents</div>
-        <div class="toolbar">
-          <select id="filterStatus" onchange="renderRegister()">
+        <h2>📋 Complaints Register</h2>
+        <div class="cap">All reports · click Review to approve dispatch, override priority, resolve duplicates or close</div>
+        <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+          <select id="filterStatus" style="width:auto;" onchange="renderRegister()">
             <option value="">All statuses</option>
             <option value="Pending">Pending</option>
             <option value="Dispatched">Dispatched</option>
+            <option value="Accepted">Accepted</option>
             <option value="In Progress">In Progress</option>
             <option value="Resolved">Resolved</option>
           </select>
-          <select id="filterZone" onchange="renderRegister()"><option value="">All zones</option></select>
-          <div class="search"><svg class="i"><use href="#i-search"/></svg><input id="filterText" placeholder="Search name, ID or description" oninput="renderRegister()"></div>
-          <span style="flex:1;"></span>
-          <button class="btn ghost sm" onclick="resetDemo()"><svg class="i"><use href="#i-refresh"/></svg>Reset demo data</button>
+          <select id="filterZone" style="width:auto;" onchange="renderRegister()"><option value="">All zones</option></select>
+          <input id="filterText" placeholder="Search name / description…" style="width:240px;" oninput="renderRegister()">
+          <span class="spacer" style="flex:1;"></span>
+          <button class="btn ghost sm" onclick="resetDemo()">↺ Reset demo data</button>
         </div>
-        <div class="tbl-scroll" style="max-height:560px;">
+        <div class="tbl-scroll" style="max-height:540px;">
           <table>
             <thead><tr>
-              <th>ID</th><th>Time</th><th>Reporter</th><th>Zone</th><th>Type</th><th>People</th><th>Priority</th><th>Status</th><th>Assigned agent</th>
+              <th>ID</th><th>Time</th><th>Reporter</th><th>Zone</th><th>Type</th><th>People</th><th>Priority</th><th>Status</th><th>Vehicle</th><th></th>
             </tr></thead>
             <tbody id="registerBody"></tbody>
           </table>
@@ -594,30 +435,48 @@ footer{max-width:1480px; margin:0 auto; padding:22px 24px 30px; display:flex; ju
 
     <!-- ANALYTICS TAB -->
     <div class="tabpane hidden" id="tab-analytics">
-      <div class="grid cols-2" style="grid-template-columns:1fr 1fr;" id="analyticsGrid">
-        <div class="card chart-host"><h2>Reports by zone</h2><div class="cap">Active and resolved reports per zone</div><div id="chartZone"></div></div>
-        <div class="card chart-host"><h2>Reports by type</h2><div class="cap">Distribution of emergency categories</div><div id="chartType"></div></div>
-        <div class="card chart-host" style="grid-column:1/-1;"><h2>Reports over the last 12 hours</h2><div class="cap">Hourly intake into the digital twin</div><div id="chartTimeline"></div></div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;" id="analyticsGrid">
+        <div class="card chart-host"><h2>Complaints by zone</h2><div class="cap">Active + resolved reports per zone</div><div id="chartZone"></div></div>
+        <div class="card chart-host"><h2>Complaints by type</h2><div class="cap">Distribution of emergency categories</div><div id="chartType"></div></div>
+        <div class="card chart-host" style="grid-column:1/-1;"><h2>Reports over the last 12 hours</h2><div class="cap">Hourly intake into the Digital Twin</div><div id="chartTimeline"></div></div>
+      </div>
+    </div>
+
+    <!-- AUDIT TAB -->
+    <div class="tabpane hidden" id="tab-audit">
+      <div class="card">
+        <h2>🧾 Audit Log</h2>
+        <div class="cap">Every decision with who made it, when, and why · newest first</div>
+        <div style="display:flex; gap:10px; margin-bottom:14px;"><button class="btn ghost sm" onclick="exportAudit()">⬇ Export CSV</button></div>
+        <div class="tbl-scroll" style="max-height:560px;">
+          <table>
+            <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Incident</th><th>Detail</th></tr></thead>
+            <tbody id="auditBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <!-- HISTORY TAB -->
     <div class="tabpane hidden" id="tab-history">
       <div class="card" style="margin-bottom:18px;">
-        <h2><svg class="i"><use href="#i-history"/></svg>Major Chennai disasters: reference dataset</h2>
+        <h2>🌀 Major Chennai Disasters — Reference Dataset</h2>
         <div class="cap">Historical events used to calibrate flood-depth estimation and zone risk weights (figures approximate, from public reports)</div>
         <div class="ds-grid" id="dsGrid"></div>
       </div>
-      <div class="grid cols-2" style="grid-template-columns:1fr 1fr;" id="histCharts">
-        <div class="card chart-host"><h2>Peak event rainfall</h2><div class="cap">Approximate heaviest short-period rainfall per event (mm)</div><div id="chartRain"></div></div>
-        <div class="card chart-host"><h2>Zone flood-risk index</h2><div class="cap">Digital twin risk weighting (0–100) from historical inundation</div><div id="chartRisk"></div></div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;" id="histCharts">
+        <div class="card chart-host"><h2>Peak event rainfall</h2><div class="cap">Approx. heaviest short-period rainfall per event (mm)</div><div id="chartRain"></div></div>
+        <div class="card chart-host"><h2>Zone flood-risk index</h2><div class="cap">Digital Twin risk weighting (0–100) from historical inundation</div><div id="chartRisk"></div></div>
       </div>
     </div>
   </div>
-  <footer><span>© 2026 Aquila · Team Clovers</span><span>Historical figures are approximate, compiled from public reporting for demo calibration</span></footer>
+  <footer>Aquila prototype · Team Clovers · Historical figures are approximate, compiled from public reporting for demo calibration</footer>
 </div>
 
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeIncident()">
+  <div class="modal" id="modal"></div>
+</div>
+<div class="toast" id="toast"></div>
 
 <script>
 /* =================================================================
@@ -690,38 +549,46 @@ const DISASTERS = [
    stats:[["~440 mm","rain in 24 h"],["17+","deaths (Chennai)"],["11 M","people affected"]], rain:440},
 ];
 
-/* ---------- Rescue agent fleet ---------- */
+/* ---------- Rescue vehicle fleet ---------- */
 const FLEET = [
-  {id:"BOAT-01", kind:"boat",  icon:"boat", glyph:"B", name:"Boat Agent 01", home:"adyar"},
-  {id:"BOAT-02", kind:"boat",  icon:"boat", glyph:"B", name:"Boat Agent 02", home:"velachery"},
-  {id:"TRUCK-01",kind:"truck", icon:"truck", glyph:"T", name:"Truck Agent 01", home:"guindy"},
-  {id:"TRUCK-02",kind:"truck", icon:"truck", glyph:"T", name:"Truck Agent 02", home:"ambattur"},
-  {id:"CAR-01",  kind:"car",   icon:"car", glyph:"C", name:"Car Agent 01",  home:"egmore"},
-  {id:"CAR-02",  kind:"car",   icon:"car", glyph:"C", name:"Car Agent 02",  home:"tambaram"},
-  {id:"MED-01",  kind:"ambulance", icon:"ambulance", glyph:"M", name:"Medical Agent 01", home:"tnagar"},
+  {id:"BOAT-01", kind:"boat",  icon:"🚤", name:"Boat Agent 01", home:"adyar"},
+  {id:"BOAT-02", kind:"boat",  icon:"🚤", name:"Boat Agent 02", home:"velachery"},
+  {id:"TRUCK-01",kind:"truck", icon:"🚚", name:"Truck Agent 01", home:"guindy"},
+  {id:"TRUCK-02",kind:"truck", icon:"🚚", name:"Truck Agent 02", home:"ambattur"},
+  {id:"CAR-01",  kind:"car",   icon:"🚗", name:"Car Agent 01",  home:"egmore"},
+  {id:"CAR-02",  kind:"car",   icon:"🚗", name:"Car Agent 02",  home:"tambaram"},
+  {id:"MED-01",  kind:"ambulance", icon:"🚑", name:"Medical Agent 01", home:"tnagar"},
+  {id:"LOG-01",  kind:"logistics", icon:"📦", name:"Logistics Agent 01", home:"koyambedu"},
 ];
 
 const TYPE_META = {
-  flood:{label:"Flooding", col:"#4f8cff", w:22}, rescue:{label:"Rescue needed", col:"#e5484d", w:30},
-  waterlogging:{label:"Waterlogging", col:"#38b2d8", w:12}, medical:{label:"Medical", col:"#e06fa0", w:28},
-  power:{label:"Power hazard", col:"#f2b33d", w:16}, tree:{label:"Tree / structure", col:"#22b38a", w:14},
-  relief:{label:"Relief supplies", col:"#9b8cf0", w:10},
+  flood:{label:"Flooding", icon:"🌊", w:22}, rescue:{label:"Rescue needed", icon:"🚨", w:30},
+  waterlogging:{label:"Waterlogging", icon:"💧", w:12}, medical:{label:"Medical", icon:"🏥", w:28},
+  power:{label:"Power hazard", icon:"⚡", w:16}, tree:{label:"Tree / structure", icon:"🌳", w:14},
+  relief:{label:"Relief supplies", icon:"🍚", w:10},
 };
-Object.values(TYPE_META).forEach(t=>{ t.icon = `<span class="tdot" style="background:${t.col}"></span>`; });
-const svgIcon = (id, cls) => `<svg class="i ${cls||""}"><use href="#i-${id}"/></svg>`;
-const NOTIF_ICONS = {received:"inbox", dispatch:"truck", progress:"lifebuoy", resolved:"check", assigned:"truck"};
-function nIcon(k){ return svgIcon(NOTIF_ICONS[k] || "bell"); }
-const STATUSES = ["Pending","Dispatched","In Progress","Resolved"];
+const STATUSES = ["Pending","Dispatched","Accepted","In Progress","Resolved"];
+const SEV_NAMES = ["","Low","Moderate","High","Life-threatening"];
+const DEPTH_NAMES = ["None","Ankle deep","Knee deep","Waist deep","Chest deep +"];
+const DUP_WINDOW_MIN = 30;
 
-/* ---------- Priority scoring (as per Aquila proposal) ---------- */
-function priorityScore(c){
-  const sev = (c.severity||1) * 12;                    // 12–48
-  const ppl = Math.min(c.people||1, 60) * 0.5;         // up to 30
-  const depth = (c.depth||0) * 5;                      // 0–20
-  const type = (TYPE_META[c.type]?.w ?? 10) * 0.6;     // 6–18
-  const zoneRisk = (Z[c.zone]?.risk ?? 50) * 0.12;     // ~5–11
-  return Math.min(100, Math.round(sev + ppl + depth + type + zoneRisk));
+/* escape anything a user typed before it goes into HTML */
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]); }
+const r1 = v => Math.round(v*10)/10;
+const hhmm = t => new Date(t).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+const hhmmss = t => new Date(t).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+
+/* ---------- Priority scoring: transparent, rule-based ---------- */
+function scoreParts(c){
+  return [
+    [`Severity (${SEV_NAMES[c.severity]||"—"}, system-assessed) × 12`, (c.severity||1) * 12],
+    [`People affected (${c.people}, capped at 60) × 0.5`, Math.min(c.people||1, 60) * 0.5],
+    [`Water depth (${DEPTH_NAMES[c.depth||0]}) × 5`, (c.depth||0) * 5],
+    [`Type weight (${TYPE_META[c.type]?.label}) × 0.6`, (TYPE_META[c.type]?.w ?? 10) * 0.6],
+    [`Zone flood risk (${Z[c.zone]?.name} ${Z[c.zone]?.risk}/100) × 0.12`, (Z[c.zone]?.risk ?? 50) * 0.12],
+  ];
 }
+function priorityScore(c){ return Math.min(100, Math.round(scoreParts(c).reduce((s,p)=>s+p[1],0))); }
 function priorityLabel(s){ return s>=75?"CRITICAL": s>=55?"HIGH": s>=35?"MEDIUM":"LOW"; }
 function priorityClass(s){ return s>=75?"pr-critical": s>=55?"pr-high": s>=35?"pr-medium":"pr-low"; }
 
@@ -729,10 +596,13 @@ function priorityClass(s){ return s>=75?"pr-critical": s>=55?"pr-high": s>=35?"p
 function seedComplaints(){
   const now = Date.now(), H = 3600e3;
   const mk=(i,t,zone,type,sev,people,depth,name,phone,desc,status,agent)=>{
-    const c={id:"AQ-"+String(1000+i), ts:now-t, zone, type, severity:sev, people, depth, name, phone, desc, status, agent:agent||null, source:"seed"};
-    c.score = priorityScore(c); return c;
+    const c={id:"AQ-"+String(1000+i), ts:now-t, zone, type, severity:sev, people, depth, name, phone, desc, status, agent:agent||null, source:"seed", t:{}};
+    c.score = c.aiScore = priorityScore(c);
+    if(status!=="Pending") c.t.dispatched = c.ts + 6*60e3;
+    if(status==="Resolved"){ c.t.resolved = c.ts + 50*60e3; c.outcome = "Cleared by crew (seed data)"; }
+    return c;
   };
-  return [
+  const list = [
     mk(1, 0.3*H,"velachery","rescue",4,6,4,"Karthik S","9840011223","Family of 6 trapped on first floor near Vijayanagar bus stand, water chest-deep and rising.","In Progress","BOAT-02"),
     mk(2, 0.6*H,"mudichur","rescue",4,12,3,"Lakshmi V","9884455667","12 residents on terrace of apartment near Mudichur lake breach. Two elderly, one infant.","Dispatched","BOAT-01"),
     mk(3, 1.1*H,"pallikaranai","flood",3,4,3,"Arun Prakash","9790334455","Ground floor flooded on Velachery–Tambaram Main Road, marsh overflow entering homes.","Dispatched","TRUCK-01"),
@@ -744,59 +614,71 @@ function seedComplaints(){
     mk(9, 6.4*H,"porur","tree",2,2,0,"Vignesh T","9176554433","Large tree fallen across Mount–Poonamallee Road after gusts.","Resolved","TRUCK-02"),
     mk(10,7.5*H,"annanagar","waterlogging",1,2,1,"Shalini K","9380445566","2nd Avenue underpass waterlogged, slow traffic.","Resolved","CAR-01"),
     mk(11,8.8*H,"sholinganallur","flood",2,4,2,"Ibrahim S","9004789012","ECR link road flooded near lake, water entering shops.","Pending",null),
-    mk(12,10.2*H,"madipakkam","relief",2,15,1,"Geetha P","9841990011","Drinking water and food needed for 15 families in Ram Nagar.","Dispatched","TRUCK-01"),
+    mk(12,10.2*H,"madipakkam","relief",2,15,1,"Geetha P","9841990011","Drinking water and food needed for 15 families in Ram Nagar.","Pending",null),
+    mk(13, 0.1*H,"velachery","rescue",4,6,4,"Anand K","9841122334","Neighbours trapped on first floor near Vijayanagar bus stand, water very high.","Pending",null),
   ];
+  list.forEach(c=>{ if(c.status==="Pending") c.dupOf = findDup(c, list); });
+  return list;
 }
 
 /* ---------- State (localStorage with graceful fallback) ---------- */
+const KEY_C = "aquila_complaints_v2", KEY_N = "aquila_notifs_v2", KEY_A = "aquila_audit_v2";
 let complaints = [];
+let auditLog = [];
 function loadState(){
   try{
-    const raw = localStorage.getItem("aquila_complaints_v1");
+    const raw = localStorage.getItem(KEY_C);
     if(raw){ complaints = JSON.parse(raw); if(Array.isArray(complaints) && complaints.length) return; }
   }catch(e){}
-  complaints = seedComplaints(); saveState();
+  complaints = seedComplaints();
+  auditLog = [{ts:Date.now(), actor:"System", action:"Demo data loaded", cid:"—", detail:"13 seeded incidents (simulated data)"}];
+  saveState(); saveAudit();
 }
-function saveState(){ try{ localStorage.setItem("aquila_complaints_v1", JSON.stringify(complaints)); }catch(e){} }
-function resetDemo(){ try{ localStorage.removeItem("aquila_complaints_v1"); localStorage.removeItem("aquila_notifs_v1"); }catch(e){} complaints = seedComplaints(); notifications = []; saveState(); saveNotifs(); refreshAll(); toast("Demo data reset."); }
+function saveState(){ try{ localStorage.setItem(KEY_C, JSON.stringify(complaints)); }catch(e){} }
+function loadAudit(){ try{ const r = localStorage.getItem(KEY_A); if(r) auditLog = JSON.parse(r); }catch(e){} }
+function saveAudit(){ try{ localStorage.setItem(KEY_A, JSON.stringify(auditLog)); }catch(e){} }
+function log(actor, action, cid, detail){
+  auditLog.push({ts:Date.now(), actor, action, cid, detail:detail||""});
+  if(auditLog.length>800) auditLog.splice(0, auditLog.length-800);
+  saveAudit();
+}
+function resetDemo(){
+  try{ [KEY_C,KEY_N,KEY_A].forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  complaints = []; auditLog = []; notifications = [];
+  loadState(); saveNotifs(); closeIncident(); refreshAll(); toast("Demo data reset.");
+}
+function nextId(){ return "AQ-" + (Math.max(1000, ...complaints.map(c=>+String(c.id).slice(3)||0)) + 1); }
+
+/* possible duplicate: same zone and type, still open, within 30 minutes */
+function findDup(c, pool){
+  const d = (pool||complaints).find(x=> x!==c && x.id!==c.id && x.status!=="Resolved" && !x.dupOf &&
+    x.zone===c.zone && x.type===c.type && Math.abs(c.ts - x.ts) <= DUP_WINDOW_MIN*60e3);
+  return d? d.id : null;
+}
 
 let currentUser = null;
-
-/* ---------- HTML escaping ----------
-   Anything a reporter types (name, phone, description) is untrusted and must be
-   escaped before it goes into innerHTML, or a crafted name such as
-   <img src=x onerror=...> executes in the admin's session. Use esc() for every
-   user-supplied value interpolated into markup. */
-function esc(v){
-  return String(v ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+let currentAdmin = null;
 
 /* ---------- Citizen notifications ---------- */
 let notifications = [];
 function loadNotifs(){
-  try{ const r = localStorage.getItem("aquila_notifs_v1"); notifications = r? JSON.parse(r):[]; }
+  try{ const r = localStorage.getItem(KEY_N); notifications = r? JSON.parse(r):[]; }
   catch(e){ notifications = []; }
 }
-function saveNotifs(){ try{ localStorage.setItem("aquila_notifs_v1", JSON.stringify(notifications)); }catch(e){} }
+function saveNotifs(){ try{ localStorage.setItem(KEY_N, JSON.stringify(notifications)); }catch(e){} }
 
-function agentDisplay(id){ const f = FLEET.find(f=>f.id===id); return f? `${f.name} (${f.id})` : id; }
+function agentDisplay(id){ const f = FLEET.find(f=>f.id===id); return f? `${f.icon} ${f.name} (${f.id})` : id; }
 
 /* creates a notification tied to a complaint; shown to the citizen who filed it */
 function notify(c, msg, icon){
+  if(c.source!=="citizen") return;
   notifications.unshift({ id:"N"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-    ts:Date.now(), complaintId:c.id, owner:c.owner||null, source:c.source, msg, icon:icon||"bell", read:false });
+    ts:Date.now(), complaintId:c.id, owner:c.owner||null, source:c.source, msg, icon:icon||"🔔", read:false });
   if(notifications.length>80) notifications.length = 80;
   saveNotifs(); renderNotifs();
-  // live toast if the citizen portal is open and this notification is theirs
   if(document.getElementById("citizenShell").classList.contains("active") && notifVisible(notifications[0]))
-    toast(msg);
+    toast((icon||"🔔")+" "+msg);
 }
-/* which notifications the signed-in citizen sees: those for complaints they filed */
 function notifVisible(n){
   if(n.source!=="citizen") return false;
   return !n.owner || n.owner===currentUser;
@@ -811,13 +693,13 @@ function renderNotifs(){
   badge.classList.toggle("hidden", unread===0);
   const fmt = t=>{
     const m = Math.round((Date.now()-t)/60000);
-    return m<1? "just now" : m<60? m+" min ago" : new Date(t).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+    return m<1? "just now" : m<60? m+" min ago" : hhmm(t);
   };
   document.getElementById("notifList").innerHTML = list.length? list.map(n=>`
     <div class="notif-item ${n.read?"":"unread"}">
-      <span class="n-ic">${nIcon(n.icon)}</span>
+      <span class="n-ic">${n.icon}</span>
       <div>${esc(n.msg)}<div class="n-time">${esc(n.complaintId)} · ${fmt(n.ts)}</div></div>
-    </div>`).join("") : `<div class="notif-empty">No notifications yet.<br>You'll be alerted here when a rescue unit is dispatched for your report.</div>`;
+    </div>`).join("") : `<div class="notif-empty">No notifications yet.<br>You'll be alerted here when the command center approves and dispatches a vehicle.</div>`;
 }
 function toggleNotifs(ev){
   ev.stopPropagation();
@@ -832,25 +714,28 @@ document.addEventListener("click", e=>{
   if(p.classList.contains("open") && !p.contains(e.target)) p.classList.remove("open");
 });
 
-/* status-change notification messages */
+/* status-change notification messages for the citizen */
 function notifyStatusChange(c, prev){
   if(prev===c.status) return;
+  const zn = Z[c.zone].name;
   if(c.status==="Dispatched" && c.agent)
-    notify(c, `Vehicle dispatched! ${agentDisplay(c.agent)} is on the way to ${Z[c.zone].name} for your report.`, "dispatch");
+    notify(c, `Approved by the command center. ${agentDisplay(c.agent)} has been dispatched to ${zn}.`, "🚨");
+  else if(c.status==="Accepted")
+    notify(c, `The ${c.agent||"rescue"} crew has accepted your request and is on the way to ${zn}.`, "📡");
   else if(c.status==="In Progress")
-    notify(c, `Rescue team ${c.agent? agentDisplay(c.agent)+" ":""}has reached ${Z[c.zone].name} — operation in progress.`, "progress");
+    notify(c, `Rescue crew has reached ${zn}. Operation in progress.`, "🛟");
   else if(c.status==="Resolved")
-    notify(c, `Your report at ${Z[c.zone].name} has been resolved. Stay safe!`, "resolved");
+    notify(c, `Your report at ${zn} has been closed: ${c.outcome||"resolved"}. Stay safe!`, "✅");
 }
 
 /* cross-tab live sync: open Citizen in one tab, Admin in another */
 window.addEventListener("storage", e=>{
-  if(e.key==="aquila_complaints_v1" || e.key==="aquila_notifs_v1"){
+  if([KEY_C,KEY_N,KEY_A].includes(e.key)){
     const before = myNotifs().filter(n=>!n.read).length;
-    loadState(); loadNotifs(); refreshAll();
+    loadState(); loadNotifs(); loadAudit(); refreshAll();
     const fresh = myNotifs().filter(n=>!n.read);
     if(document.getElementById("citizenShell").classList.contains("active") && fresh.length>before && fresh[0])
-      toast(fresh[0].msg);
+      toast(fresh[0].icon+" "+fresh[0].msg);
   }
 });
 
@@ -864,17 +749,35 @@ function show(view){
 function enterCitizen(){
   const n = document.getElementById("citizenName").value.trim();
   currentUser = n || "Guest Citizen";
-  document.getElementById("userName").textContent = currentUser;
-  document.getElementById("userAvatar").textContent = currentUser.split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
   document.getElementById("fName").value = currentUser==="Guest Citizen" ? "" : currentUser;
-  show("citizen"); renderCitizen();
+  show("citizen"); refreshAll();
 }
-function enterAdmin(){
-  const p = document.getElementById("adminPass").value.trim();
-  if(p !== "aquila2026"){ toast("Incorrect passcode. Please try again.", true); return; }
+/* admin accounts: only a SHA-256 of "email:password" is stored (client-side demo, not real auth) */
+const ADMIN_ACCOUNTS = {
+  "admin@aquila.demo": {name:"Duty Officer (admin@aquila.demo)", hash:"c58e054281d82d5ae5700d69ab7d709f26be38f66cc0ad319d94c12e76ed6adf"},
+};
+async function sha256Hex(s){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function enterAdmin(){
+  const email = document.getElementById("adminEmail").value.trim().toLowerCase();
+  const p = document.getElementById("adminPass").value;
+  const acct = ADMIN_ACCOUNTS[email];
+  let ok = false;
+  try{ ok = !!acct && (await sha256Hex(email+":"+p)) === acct.hash; }
+  catch(e){ toast("Sign-in needs a secure page (https or localhost).", true); return; }
+  if(!ok){ toast("Incorrect email or password.", true); return; }
+  currentAdmin = acct.name;
+  document.getElementById("adminPass").value = "";
+  document.getElementById("adminWho").textContent = "👤 " + currentAdmin;
+  log(currentAdmin, "Signed in", "—", "Command center");
   show("admin"); refreshAll();
 }
-function logout(){ currentUser=null; document.getElementById("adminPass").value=""; show("landing"); }
+function logout(){
+  if(currentAdmin && document.getElementById("adminShell").classList.contains("active")) log(currentAdmin, "Signed out", "—", "");
+  currentUser=null; currentAdmin=null; document.getElementById("adminPass").value=""; closeIncident(); show("landing");
+}
 
 /* ---------- Toast ---------- */
 let toastTimer;
@@ -916,7 +819,7 @@ function buildMap(wrapId, interactive){
       <stop offset="0" stop-color="#102c48"/><stop offset="1" stop-color="#0b2036"/>
     </linearGradient>
     <radialGradient id="cityGlow_${wrapId}" cx="0.5" cy="0.4" r="0.8">
-      <stop offset="0" stop-color="#141e2c"/><stop offset="1" stop-color="#0c131e"/>
+      <stop offset="0" stop-color="#1b2433"/><stop offset="1" stop-color="#121826"/>
     </radialGradient>
   </defs>
   <rect width="${W}" height="${H}" fill="url(#cityGlow_${wrapId})"/>
@@ -977,7 +880,7 @@ function buildMap(wrapId, interactive){
     const c = document.createElementNS(svg.namespaceURI,"circle");
     c.setAttribute("cx",z.x); c.setAttribute("cy",z.y); c.setAttribute("r","4.5");
     c.setAttribute("fill", z.risk>=75? "#ec835a" : z.risk>=55? "#c98500" : "#55617a");
-    c.setAttribute("stroke","#0a121d"); c.setAttribute("stroke-width","1.5");
+    c.setAttribute("stroke","#0d1117"); c.setAttribute("stroke-width","1.5");
     const t = document.createElementNS(svg.namespaceURI,"text");
     t.setAttribute("x",z.x+8); t.setAttribute("y",z.y+4); t.setAttribute("class","zone-label"); t.textContent = z.name;
     g.appendChild(c); g.appendChild(t); zonesG.appendChild(g);
@@ -999,12 +902,14 @@ function buildMap(wrapId, interactive){
   // tooltip + legend
   const tip = document.createElement("div"); tip.className="map-tip"; wrap.appendChild(tip);
   const legend = document.createElement("div"); legend.className="map-legend";
-  legend.innerHTML = `
-    <span><span class="kdot" style="background:#e5484d;"></span>Critical</span>
-    <span><span class="kdot" style="background:#f0874f;"></span>High</span>
-    <span><span class="kdot" style="background:#f2b33d;"></span>Medium</span>
-    <span><span class="lg-agent">B</span>Rescue agent (Boat · Truck · Car · Medical)</span>
-    <span><span class="kdot" style="background:#1c4d79;"></span>Rivers / marsh</span>`;
+  legend.innerHTML = (interactive? `
+    <span><span class="kdot" style="background:#d03b3b;"></span>Critical incident</span>
+    <span><span class="kdot" style="background:#ec835a;"></span>High</span>
+    <span><span class="kdot" style="background:#fab219;"></span>Medium</span>` : `
+    <span><span class="kdot" style="background:#fab219;"></span>Active report</span>`) + `
+    <span>🚤🚚🚗🚑📦 Rescue vehicles (moving)</span>
+    <span><span class="kdot" style="background:#1c4d79;"></span>Rivers / marsh</span>
+    <span><span class="kdot" style="background:#ec835a;"></span><span class="kdot" style="background:#c98500; margin-left:-3px;"></span> Zone flood risk</span>`;
   wrap.appendChild(legend);
 
   const m = {svg, wrap, tip, interactive,
@@ -1025,13 +930,13 @@ function buildMap(wrapId, interactive){
   m.agents = FLEET.map((f,i)=>{
     const g = document.createElementNS(svg.namespaceURI,"g");
     const halo = document.createElementNS(svg.namespaceURI,"circle");
-    halo.setAttribute("r","9"); halo.setAttribute("fill","rgba(79,140,255,0.25)"); halo.setAttribute("stroke","rgba(79,140,255,0.8)"); halo.setAttribute("stroke-width","1.2");
+    halo.setAttribute("r","11"); halo.setAttribute("fill","rgba(57,135,229,0.18)"); halo.setAttribute("stroke","rgba(57,135,229,0.5)"); halo.setAttribute("stroke-width","1");
     const txt = document.createElementNS(svg.namespaceURI,"text");
-    txt.setAttribute("text-anchor","middle"); txt.setAttribute("dominant-baseline","central"); txt.setAttribute("class","agent-glyph"); txt.textContent = f.glyph;
+    txt.setAttribute("text-anchor","middle"); txt.setAttribute("dominant-baseline","central"); txt.setAttribute("font-size","13"); txt.textContent = f.icon;
     g.appendChild(halo); g.appendChild(txt);
     m.agentsG.appendChild(g);
     const home = Z[f.home];
-    return {fleet:f, el:g, x:home.x, y:home.y, tx:home.x, ty:home.y, phase:Math.random()*6.28};
+    return {fleet:f, el:g, x:home.x, y:home.y, tx:home.x, ty:home.y, ox:0, oy:0, settle:1, phase:Math.random()*6.28};
   });
   MAPS.push(m);
   return m;
@@ -1054,7 +959,7 @@ function renderIncidents(){
     });
     active.forEach(c=>{
       const z = Z[c.zone]; if(!z) return;
-      const col = c.score>=75? "#e5484d" : c.score>=55? "#f0874f" : "#f2b33d";
+      const col = !m.interactive? "#fab219" : c.score>=75? "#d03b3b" : c.score>=55? "#ec835a" : "#fab219";
       const g = document.createElementNS(m.svg.namespaceURI,"g");
       g.style.cursor = m.interactive? "pointer":"default";
       const pulse = document.createElementNS(m.svg.namespaceURI,"circle");
@@ -1067,12 +972,12 @@ function renderIncidents(){
       pulse.appendChild(a1); pulse.appendChild(a2);
       const core = document.createElementNS(m.svg.namespaceURI,"circle");
       core.setAttribute("cx",z.x); core.setAttribute("cy",z.y); core.setAttribute("r","5.5"); core.setAttribute("fill",col);
-      core.setAttribute("stroke","#0a121d"); core.setAttribute("stroke-width","1.5");
+      core.setAttribute("stroke","#0d1117"); core.setAttribute("stroke-width","1.5");
       g.appendChild(pulse); g.appendChild(core);
       const showTip = (ev)=>{
         const r = m.wrap.getBoundingClientRect();
         m.tip.style.display="block";
-        m.tip.innerHTML = `<b>${c.id}</b> · <span style="color:${col}; font-weight:700;">${priorityLabel(c.score)} ${c.score}</span><br>
+        m.tip.innerHTML = `<b>${c.id}</b>${m.interactive? ` · <span style="color:${col}; font-weight:700;">${priorityLabel(c.score)} ${c.score}</span>`:""}<br>
           ${TYPE_META[c.type].icon} ${TYPE_META[c.type].label} — ${Z[c.zone].name}<br>
           <span style="color:var(--muted)">${c.people} people · ${c.status}${c.agent? " · "+c.agent:""}</span>`;
         let lx = ev.clientX - r.left + 14, ly = ev.clientY - r.top + 10;
@@ -1081,6 +986,7 @@ function renderIncidents(){
       };
       g.addEventListener("mousemove", showTip);
       g.addEventListener("mouseleave", ()=> m.tip.style.display="none");
+      if(m.interactive) g.addEventListener("click", ()=>{ m.tip.style.display="none"; openIncident(c.id); });
       m.incidentsG.appendChild(g);
     });
   });
@@ -1100,13 +1006,24 @@ function updateAgentTargets(){
   const assigned = {};
   complaints.filter(c=>c.agent && c.status!=="Resolved").forEach(c=>{ if(!assigned[c.agent]) assigned[c.agent]=c; });
   MAPS.forEach(m=>{
+    // vehicles sharing a destination are spread around it so they don't stack
+    const groups = {};
     m.agents.forEach(a=>{
       const task = assigned[a.fleet.id];
-      const dest = task ? Z[task.zone] : Z[a.fleet.home];
+      a._dest = task ? Z[task.zone] : Z[a.fleet.home];
+      (groups[a._dest.id] = groups[a._dest.id] || []).push(a);
+    });
+    Object.values(groups).forEach(g=>g.forEach((a,i)=>{
+      const ang = (i / g.length) * Math.PI * 2 - Math.PI/2, rad = g.length>1 ? 16 : 0;
+      a.ox = Math.cos(ang)*rad; a.oy = Math.sin(ang)*rad;
+    }));
+    m.agents.forEach(a=>{
+      const task = assigned[a.fleet.id];
+      const dest = a._dest;
       a.tx = dest.x; a.ty = dest.y;
       a.busy = !!task;
-      a.el.firstChild.setAttribute("fill", task? "rgba(240,135,79,0.3)":"rgba(79,140,255,0.25)");
-      a.el.firstChild.setAttribute("stroke", task? "rgba(240,135,79,0.9)":"rgba(79,140,255,0.8)");
+      a.el.firstChild.setAttribute("fill", task? "rgba(208,59,59,0.18)":"rgba(57,135,229,0.15)");
+      a.el.firstChild.setAttribute("stroke", task? "rgba(208,59,59,0.6)":"rgba(57,135,229,0.45)");
     });
   });
 }
@@ -1123,12 +1040,18 @@ function animate(now){
       tr.el.setAttribute("cx",x); tr.el.setAttribute("cy",y);
     });
     m.agents.forEach(a=>{
-      const dx = a.tx - a.x, dy = a.ty - a.y;
+      // base position glides to the target; never overshoots
+      const gx = a.tx + a.ox, gy = a.ty + a.oy;
+      const dx = gx - a.x, dy = gy - a.y;
       const dist = Math.hypot(dx,dy);
-      const speed = 0.028 * dt;      // px per ms scaled
-      if(dist > 2){ a.x += dx/dist * speed; a.y += dy/dist * speed; }
-      else { a.phase += dt*0.002; a.x = a.tx + Math.cos(a.phase)*6; a.y = a.ty + Math.sin(a.phase*1.3)*4; }
-      a.el.setAttribute("transform",`translate(${a.x},${a.y})`);
+      const step = Math.min(dist, 0.045 * dt);   // px per ms
+      if(dist > 0.01){ a.x += dx/dist * step; a.y += dy/dist * step; }
+      // a gentle idle bob fades in once parked, so arriving is smooth (no snap)
+      const parked = dist < 1 ? 1 : 0;
+      a.settle += (parked - a.settle) * Math.min(1, dt*0.004);
+      a.phase += dt*0.0015;
+      const bx = Math.cos(a.phase)*2.2*a.settle, by = Math.sin(a.phase*1.3)*1.6*a.settle;
+      a.el.setAttribute("transform",`translate(${(a.x+bx).toFixed(2)},${(a.y+by).toFixed(2)})`);
     });
   });
   requestAnimationFrame(animate);
@@ -1138,103 +1061,128 @@ requestAnimationFrame(animate);
 /* =================================================================
    CITIZEN DASHBOARD
    ================================================================= */
-let selSeverity = 0;
 function initCitizenForm(){
   const zoneSel = document.getElementById("fZone");
   zoneSel.innerHTML = ZONES.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(z=>`<option value="${z.id}">${z.name}</option>`).join("");
-  document.querySelectorAll("#sevRow .sev-opt").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      selSeverity = +btn.dataset.sev;
-      document.querySelectorAll("#sevRow .sev-opt").forEach(b=>b.className="sev-opt");
-      btn.classList.add("sel-"+selSeverity);
-      previewScore();
-    });
-  });
-  ["fZone","fType","fPeople","fDepth"].forEach(id=>document.getElementById(id).addEventListener("input", previewScore));
+}
+/* severity is assessed by the system, never chosen by the citizen */
+function assessSeverity(d){
+  const base = {rescue:3, medical:3, flood:2, power:2, tree:1, waterlogging:1, relief:1}[d.type] ?? 1;
+  return Math.max(1, Math.min(4, base + (d.depth>=3?1:0) + (d.people>=10?1:0)));
 }
 function draftComplaint(){
-  return {
+  const d = {
     zone: document.getElementById("fZone").value,
     type: document.getElementById("fType").value,
-    severity: selSeverity || 1,
-    people: Math.max(1, +document.getElementById("fPeople").value || 1),
+    people: Math.min(500, Math.max(1, +document.getElementById("fPeople").value || 1)),
     depth: +document.getElementById("fDepth").value || 0,
   };
+  d.severity = assessSeverity(d);
+  return d;
 }
-function previewScore(){
-  const d = draftComplaint();
-  if(!selSeverity){ document.getElementById("scorePreviewBadge").innerHTML=""; document.getElementById("scoreExplain").textContent="Select a severity to compute the rescue priority."; return; }
-  const s = priorityScore(d);
-  document.getElementById("scorePreviewBadge").innerHTML = `<span class="pr-badge ${priorityClass(s)}" style="font-size:13px; padding:6px 12px;">${priorityLabel(s)} · ${s}</span>`;
-  document.getElementById("scoreExplain").textContent =
-    `Severity + ${d.people} affected + water depth + ${Z[d.zone].name} zone risk (${Z[d.zone].risk}/100).`;
+function addReport(fields, source, owner){
+  const c = {...fields, id:nextId(), ts:Date.now(), status:"Pending", agent:null, source, owner:owner||null, t:{}};
+  c.score = c.aiScore = priorityScore(c);
+  c.dupOf = findDup(c);
+  complaints.unshift(c); saveState();
+  log(source==="citizen"? `Citizen: ${c.name}` : "Citizen (scenario)", "Report received", c.id,
+      `${TYPE_META[c.type].label}, ${Z[c.zone].name}, ${c.people} people · AI priority ${c.score}` + (c.dupOf? ` · flagged possible duplicate of ${c.dupOf}`:""));
+  return c;
 }
 function submitComplaint(){
   const name = document.getElementById("fName").value.trim();
   const phone = document.getElementById("fPhone").value.trim();
   if(!name){ toast("Please enter the reporter name.", true); return; }
-  if(!/^\d{10}$/.test(phone)){ toast("Please enter a valid 10-digit phone number.", true); return; }
-  if(!selSeverity){ toast("Please select a severity level.", true); return; }
-  const d = draftComplaint();
-  const c = {...d, id:"AQ-"+String(1000+complaints.length+1), ts:Date.now(), name, phone,
-    desc: document.getElementById("fDesc").value.trim() || "—", status:"Pending", agent:null, source:"citizen", owner: currentUser};
-  c.score = priorityScore(c);
-  complaints.unshift(c); saveState();
-  toast(`Report ${c.id} submitted — priority ${priorityLabel(c.score)} (${c.score}). Agents notified.`);
+  if(!/^[6-9]\d{9}$/.test(phone)){ toast("Please enter a valid 10-digit Indian mobile number.", true); return; }
+  const c = addReport({...draftComplaint(), name, phone, desc: document.getElementById("fDesc").value.trim() || "—"}, "citizen", currentUser);
+  toast(`Report ${c.id} submitted. An officer is reviewing it.`);
   document.getElementById("fDesc").value=""; document.getElementById("fPhone").value="";
-  selSeverity=0; document.querySelectorAll("#sevRow .sev-opt").forEach(b=>b.className="sev-opt");
-  document.getElementById("scorePreviewBadge").innerHTML="";
-  document.getElementById("scoreExplain").textContent="Fill the form to see the computed rescue priority.";
-  // simulated dispatch pipeline for the demo
-  notify(c, `Report ${c.id} received by the Aquila command center — AI priority ${priorityLabel(c.score)} (${c.score}).`, "received");
-  setTimeout(()=>{ if(c.status==="Pending" && c.score>=55){ const prev=c.status; c.status="Dispatched"; c.agent = pickAgent(c); notifyStatusChange(c, prev); saveState(); refreshAll(); } }, 6000);
+  notify(c, `Report ${c.id} received by the Aquila command center; an officer is reviewing it.`, "📨");
   refreshAll();
 }
-function pickAgent(c){
-  const busy = new Set(complaints.filter(x=>x.agent && x.status!=="Resolved" && x!==c).map(x=>x.agent));
-  const wantBoat = c.depth>=3 || (c.type==="rescue" && c.depth>=2);
-  const pref = wantBoat? ["boat","truck","ambulance","car"] : c.type==="medical"? ["ambulance","car","truck","boat"] : ["truck","car","boat","ambulance"];
-  for(const k of pref){ const f = FLEET.find(f=>f.kind===k && !busy.has(f.id)); if(f) return f.id; }
-  return FLEET.find(f=>!busy.has(f.id))?.id || FLEET[0].id;
+
+/* ---------- vehicle matching (rule-based) ---------- */
+function busyMap(exceptC){
+  const m = {};
+  complaints.forEach(x=>{ if(x.agent && x.status!=="Resolved" && x!==exceptC) m[x.agent] = x.id; });
+  return m;
 }
+function needsBoat(c){ return c.depth>=3 || (c.type==="rescue" && c.depth>=2); }
+function prefOrder(c){
+  if(needsBoat(c)) return ["boat","truck","ambulance","car","logistics"];
+  if(c.type==="medical") return ["ambulance","car","truck","boat","logistics"];
+  if(c.type==="relief") return ["logistics","truck","car","boat","ambulance"];
+  return ["truck","car","boat","logistics","ambulance"];
+}
+function recReason(c){
+  if(needsBoat(c)) return "Water waist-deep or more → boat preferred";
+  if(c.type==="medical") return "Medical emergency → ambulance preferred";
+  if(c.type==="relief") return "Relief supplies → logistics vehicle preferred";
+  return "Road-accessible incident → truck or car preferred";
+}
+/* returns a free vehicle or null if the whole fleet is busy */
+function pickAgent(c){
+  const busy = busyMap(c);
+  for(const k of prefOrder(c)){ const f = FLEET.find(f=>f.kind===k && !busy[f.id]); if(f) return f.id; }
+  return null;
+}
+
 function renderCitizen(){
   const mine = complaints.filter(c=>c.source==="citizen" && (!c.owner || c.owner===currentUser));
-  const list = mine.length? mine : [];
-  document.getElementById("myCount").textContent = list.length? `${list.length} report${list.length===1?"":"s"} filed in this session` : "Reports you submit will appear here.";
-  const stepIdx = s=> ({"Pending":0,"Dispatched":1,"In Progress":2,"Resolved":3})[s] ?? 0;
-  document.getElementById("myComplaints").innerHTML = list.map(c=>`
+  document.getElementById("myCount").textContent = mine.length? `${mine.length} report(s) filed in this session.` : "No reports yet. Submit one on the left.";
+  const stepIdx = s=> ({"Pending":0,"Dispatched":1,"Accepted":2,"In Progress":3,"Resolved":4})[s] ?? 0;
+  document.getElementById("myComplaints").innerHTML = mine.map(c=>`
     <div class="c-complaint">
       <div class="c-top">
         <h4>${TYPE_META[c.type].icon} ${TYPE_META[c.type].label} — ${Z[c.zone].name}</h4>
-        <span class="pr-badge ${priorityClass(c.score)}">${priorityLabel(c.score)} ${c.score}</span>
+        <span class="badge-st ${stClass(c.status)}">${c.status}</span>
       </div>
-      <div class="c-meta"><span class="mono">${c.id}</span> · ${new Date(c.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})} · ${c.people} people${c.agent? " · Agent "+c.agent:""}</div>
+      <div class="c-meta">${esc(c.id)} · ${hhmm(c.ts)} · ${c.people} people${c.agent? " · Vehicle "+esc(c.agent):""}</div>
       <div class="steps">
-        ${["Reported","Dispatched","In Progress","Resolved"].map((s,i)=>`<div class="step ${i<=stepIdx(c.status)?"done":""}">${s}</div>`).join("")}
+        ${["Reported","Dispatched","Crew accepted","In progress","Resolved"].map((s,i)=>`<div class="step ${i<=stepIdx(c.status)?"done":""}">${s}</div>`).join("")}
       </div>
-    </div>`).join("") || `<div class="empty">${svgIcon("inbox")}No reports yet</div>`;
+      <div class="c-meta" style="margin-top:8px;">${
+        c.status==="Pending" ? "⏳ Awaiting command-center review" :
+        c.status==="Resolved" ? "✅ " + esc(c.outcome||"Resolved") :
+        "Last update " + hhmm(Math.max(c.t?.dispatched||0, c.t?.accepted||0, c.t?.inprogress||0, c.ts))}</div>
+    </div>`).join("");
 }
 
 /* =================================================================
    ADMIN DASHBOARD
    ================================================================= */
+const pl = (n,w)=> `${n} ${w}${n===1?"":"s"}`;
+function median(a){ if(!a.length) return null; const s=a.slice().sort((x,y)=>x-y), m=s.length>>1; return s.length%2? s[m] : (s[m-1]+s[m])/2; }
+function fmtDur(ms){ if(ms==null) return "—"; const s = ms/1000; return s<90? Math.round(s)+" s" : r1(s/60)+" min"; }
+function sessionTimes(){
+  const live = complaints.filter(c=>c.source!=="seed" && c.t?.dispatched);
+  return {n: live.length, med: median(live.map(c=>c.t.dispatched - c.ts))};
+}
 function renderKPIs(){
   const act = complaints.filter(c=>c.status!=="Resolved");
+  const pend = act.filter(c=>c.status==="Pending");
   const crit = act.filter(c=>c.score>=75);
   const resolved = complaints.filter(c=>c.status==="Resolved").length;
-  const busyAgents = new Set(complaints.filter(c=>c.agent && c.status!=="Resolved").map(c=>c.agent)).size;
+  const busy = Object.keys(busyMap()).length;
   const people = act.reduce((s,c)=>s+(c.people||0),0);
-  const avg = act.length? Math.round(act.reduce((s,c)=>s+c.score,0)/act.length) : 0;
+  const st = sessionTimes();
   const k = (label,val,sub,dot)=>`<div class="kpi"><div class="k-label">${label}</div><div class="k-val">${val}</div><div class="k-sub">${dot?`<span class="kdot" style="background:${dot}"></span>`:""}${sub}</div></div>`;
   document.getElementById("kpiRow").innerHTML =
-    k("Total reports", complaints.length, "since 00:00 IST") +
-    k("Active incidents", act.length, `${complaints.filter(c=>c.status==="Pending").length} awaiting dispatch`, "#f2b33d") +
-    k("Critical priority", crit.length, "score ≥ 75", "#e5484d") +
+    k("Awaiting approval", pend.length, `${pend.filter(c=>c.score>=75).length} critical · ${pl(pend.filter(c=>c.dupOf).length,"possible duplicate")}`, "#fab219") +
+    k("Active incidents", act.length, `${complaints.length} reports total`) +
+    k("Critical priority", crit.length, "score ≥ 75", "#d03b3b") +
     k("People affected", people, "in active incidents") +
-    k("Agents deployed", `${busyAgents}/${FLEET.length}`, "fleet utilisation", "#4f8cff") +
-    k("Resolved today", resolved, "avg active priority "+avg, "#2fbf71");
+    k("Vehicles deployed", `${busy}/${FLEET.length}`, "one task per vehicle", "#3987e5") +
+    k("Report → dispatch", fmtDur(st.med), st.n? `median · n=${st.n} this session` : "median · approve a report to measure", "#9085e9") +
+    k("Resolved", resolved, `${complaints.filter(c=>c.crewDone && c.status!=="Resolved").length} awaiting officer closure`, "#0ca30c");
 }
 
+const stClass = s=>({"Pending":"st-pending","Dispatched":"st-dispatched","Accepted":"st-accepted","In Progress":"st-inprogress","Resolved":"st-resolved"})[s];
+function prBadge(c){
+  return `<span class="pr-badge ${priorityClass(c.score)}">${priorityLabel(c.score)} ${c.score}</span>` +
+    (c.override? `<span class="ovr" title="AI score ${c.aiScore}, overridden: ${esc(c.override.reason)}">✎ AI ${c.aiScore}</span>`:"") +
+    (c.dupOf && c.status!=="Resolved"? `<span class="flag" title="Same zone and type within ${DUP_WINDOW_MIN} min">⚑ dup? ${esc(c.dupOf)}</span>`:"");
+}
 function renderRegister(){
   const fs = document.getElementById("filterStatus").value;
   const fz = document.getElementById("filterZone").value;
@@ -1242,47 +1190,314 @@ function renderRegister(){
   const rows = complaints
     .filter(c=> (!fs || c.status===fs) && (!fz || c.zone===fz) &&
       (!ft || (c.name+" "+c.desc+" "+c.id).toLowerCase().includes(ft)))
-    .slice().sort((a,b)=> (a.status==="Resolved") - (b.status==="Resolved") || b.score - a.score);
-  const stClass = s=>({"Pending":"st-pending","Dispatched":"st-dispatched","In Progress":"st-inprogress","Resolved":"st-resolved"})[s];
+    .slice().sort((a,b)=> (a.status==="Resolved") - (b.status==="Resolved") || (b.status==="Pending") - (a.status==="Pending") || b.score - a.score);
   document.getElementById("registerBody").innerHTML = rows.map(c=>`
     <tr>
-      <td class="mono" style="font-weight:600">${c.id}</td>
-      <td class="mono" style="color:var(--muted)">${new Date(c.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</td>
-      <td><b style="font-weight:600">${esc(c.name)}</b><br><span class="sub mono">${esc(c.phone||"")}</span></td>
-      <td>${Z[c.zone]?.name||c.zone}</td>
-      <td title="${esc(c.desc||"")}">${TYPE_META[c.type].icon} ${TYPE_META[c.type].label}</td>
+      <td class="mono"><b>${esc(c.id)}</b></td>
+      <td class="mono" style="color:var(--muted)">${hhmm(c.ts)}</td>
+      <td><b>${esc(c.name)}</b><br><span style="color:var(--muted); font-size:11.5px;">${esc(c.phone)}</span></td>
+      <td>${Z[c.zone]?.name||esc(c.zone)}</td>
+      <td title="${esc(c.desc)}">${TYPE_META[c.type].icon} ${TYPE_META[c.type].label}</td>
       <td class="mono">${c.people}</td>
-      <td><span class="pr-badge ${priorityClass(c.score)}">${priorityLabel(c.score)} ${c.score}</span></td>
-      <td><select onchange="setStatus('${c.id}', this.value)">${STATUSES.map(s=>`<option ${s===c.status?"selected":""}>${s}</option>`).join("")}</select></td>
-      <td><select onchange="setAgent('${c.id}', this.value)"><option value="">— unassigned —</option>${FLEET.map(f=>`<option value="${f.id}" ${f.id===c.agent?"selected":""}>${f.id}</option>`).join("")}</select></td>
-    </tr>`).join("") || `<tr><td colspan="9" style="text-align:center; color:var(--muted); padding:24px;">No complaints match the filters.</td></tr>`;
+      <td>${prBadge(c)}</td>
+      <td><span class="badge-st ${stClass(c.status)}">${c.status}</span></td>
+      <td>${c.agent? agentDisplay(c.agent).split(" (")[0] : '<span style="color:var(--muted)">—</span>'}</td>
+      <td><button class="btn sm ${c.status==="Pending"?"":"ghost"}" onclick="openIncident('${esc(c.id)}')">${c.status==="Pending"?"Review":"Open"}</button></td>
+    </tr>`).join("") || `<tr><td colspan="10" style="text-align:center; color:var(--muted); padding:24px;">No complaints match the filters.</td></tr>`;
 }
-function setStatus(id, s){ const c = complaints.find(x=>x.id===id); if(c){ const prev=c.status; c.status=s; notifyStatusChange(c, prev); saveState(); refreshAll(); toast(`${id} → ${s}`);} }
-function setAgent(id, a){ const c = complaints.find(x=>x.id===id); if(c){ const prev=c.status; c.agent=a||null; if(a && c.status==="Pending") c.status="Dispatched"; if(a && c.status==="Dispatched" && prev!=="Dispatched") notifyStatusChange(c, prev); else if(a && c.source==="citizen") notify(c, `${agentDisplay(a)} assigned to your report at ${Z[c.zone].name}.`, "assigned"); saveState(); refreshAll(); toast(a? `${a} assigned to ${id}` : `${id} unassigned`);} }
 
 function renderFleet(){
-  const assigned = {};
-  complaints.filter(c=>c.agent && c.status!=="Resolved").forEach(c=>{ if(!assigned[c.agent]) assigned[c.agent]=c; });
+  const busy = busyMap();
+  const stateTxt = {"Dispatched":"EN ROUTE","Accepted":"ACCEPTED","In Progress":"ON SCENE"};
   document.getElementById("fleetList").innerHTML = FLEET.map(f=>{
-    const t = assigned[f.id];
-    return `<div class="agent-row">
-      <div class="agent-ic">${svgIcon(f.icon)}</div>
+    const t = busy[f.id] && complaints.find(c=>c.id===busy[f.id]);
+    return `<div class="agent-row ${t?"clickrow":""}" ${t?`onclick="openIncident('${t.id}')"`:""}>
+      <div class="agent-ic">${f.icon}</div>
       <div><div class="a-name">${f.name}</div>
       <div class="a-sub">${t? `→ ${Z[t.zone].name} · ${t.id}` : `Standby · ${Z[f.home].name}`}</div></div>
-      <span class="a-state ${t?"a-busy":"a-free"}">${t?"On task":"Available"}</span>
+      <span class="a-state ${t?"a-busy":"a-free"}">${t? (t.crewDone? "DONE · CLOSE" : stateTxt[t.status]||"ON TASK") : "AVAILABLE"}</span>
     </div>`;
   }).join("");
 }
 function renderQueue(){
-  const q = complaints.filter(c=>c.status!=="Resolved").slice().sort((a,b)=>b.score-a.score).slice(0,6);
-  document.getElementById("priorityQueue").innerHTML = q.map((c,i)=>`
-    <div class="agent-row">
-      <div class="agent-ic rank">${String(i+1).padStart(2,"0")}</div>
-      <div><div class="a-name">${TYPE_META[c.type].icon}${Z[c.zone].name} · ${c.people} people</div>
-      <div class="a-sub">${c.id} · ${c.status}${c.agent? " · "+c.agent:""}</div></div>
+  const act = c=> c.status==="Pending" || c.crewDone ? 1 : 0;
+  const q = complaints.filter(c=>c.status!=="Resolved").slice().sort((a,b)=> act(b)-act(a) || b.score-a.score).slice(0,8);
+  document.getElementById("priorityQueue").innerHTML = q.map((c,i)=>{
+    const rec = c.status==="Pending"? pickAgent(c) : null;
+    return `<div class="agent-row clickrow" onclick="openIncident('${c.id}')">
+      <div class="agent-ic" style="font-size:13px; font-weight:800; color:var(--muted);">#${i+1}</div>
+      <div><div class="a-name">${TYPE_META[c.type].icon} ${Z[c.zone].name} · ${c.people} ppl${c.dupOf?' <span class="flag">⚑ dup?</span>':""}</div>
+      <div class="a-sub">${c.id} · ${c.status==="Pending"? `<b style="color:var(--warn)">Needs approval</b> · rec. ${rec? agentDisplay(rec).split(" (")[0] : "no vehicle free"}` : c.crewDone? `<b style="color:#4cc94c">Crew done · ready to close</b> · ${c.agent}` : c.status+(c.agent? " · "+c.agent:"")}</div></div>
       <span class="pr-badge ${priorityClass(c.score)}" style="margin-left:auto;">${c.score}</span>
-    </div>`).join("") || `<div class="empty">${svgIcon("check")}All incidents resolved</div>`;
+    </div>`;
+  }).join("") || `<div style="color:var(--muted); font-size:13px;">All incidents resolved. 🎉</div>`;
 }
+
+/* ---------- Incident review panel (human-in-the-loop) ---------- */
+let openId = null, overrideOpen = false, agentChoice = {};
+function openIncident(id){ openId = id; overrideOpen = false; renderModal(); document.getElementById("modalBg").classList.add("open"); }
+function closeIncident(){ openId = null; overrideOpen = false; document.getElementById("modalBg").classList.remove("open"); }
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && openId) closeIncident(); });
+function modalBusy(){
+  const m = document.getElementById("modal");
+  if(overrideOpen) return true;
+  const a = document.activeElement;
+  if(m.contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return true;
+  return [...m.querySelectorAll("input[type=text],textarea")].some(el=>el.value.trim());
+}
+function renderModal(){
+  if(!openId) return;
+  const c = complaints.find(x=>x.id===openId); if(!c){ closeIncident(); return; }
+  const parts = scoreParts(c), raw = parts.reduce((s,p)=>s+p[1],0);
+  const busy = busyMap(c);
+  const rec = pickAgent(c);
+  const choice = agentChoice[c.id] && !busy[agentChoice[c.id]] ? agentChoice[c.id] : rec;
+  const events = auditLog.filter(e=>e.cid===c.id);
+  const dup = c.dupOf && complaints.find(x=>x.id===c.dupOf);
+  let html = `
+  <div class="m-head">
+    <h3>${TYPE_META[c.type].icon} ${esc(c.id)} · ${TYPE_META[c.type].label} — ${Z[c.zone].name}</h3>
+    <span class="badge-st ${stClass(c.status)}">${c.status}</span>
+    <button class="m-x" onclick="closeIncident()" title="Close (Esc)">✕</button>
+  </div>
+  <div class="m-body">
+    <div class="m-sec">
+      <h4>Report</h4>
+      <div class="m-facts">
+        <div><span>Reporter</span>${esc(c.name)}<br><span style="text-transform:none">${esc(c.phone)}</span></div>
+        <div><span>Reported</span>${hhmm(c.ts)}</div>
+        <div><span>People</span>${c.people}</div>
+        <div><span>Water / severity</span>${DEPTH_NAMES[c.depth||0]} · ${SEV_NAMES[c.severity]}</div>
+      </div>
+      <div class="m-desc">${esc(c.desc)}</div>
+    </div>`;
+
+  if(c.dupOf && c.status!=="Resolved"){
+    html += `<div class="warnbox">⚑ <b>Possible duplicate</b> of <a href="#" onclick="openIncident('${esc(c.dupOf)}');return false;" style="color:#6db3ff">${esc(c.dupOf)}</a>
+      ${dup? ` (${TYPE_META[dup.type].label}, ${Z[dup.zone].name}, reported ${Math.round(Math.abs(c.ts-dup.ts)/60000)} min apart, status ${dup.status}${dup.agent? ", "+dup.agent:""})`:""}.
+      The system never merges reports automatically.
+      <div class="m-actions">
+        <button class="btn sm" onclick="linkDuplicate('${c.id}')">Link as duplicate &amp; close</button>
+        <button class="btn ghost sm" onclick="dismissDuplicate('${c.id}')">Not a duplicate</button>
+      </div></div>`;
+  }
+
+  html += `<div class="m-sec">
+      <h4>Priority</h4>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span class="pr-badge ${priorityClass(c.score)}" style="font-size:14px; padding:6px 12px;">${priorityLabel(c.score)} · ${c.score}</span>
+        ${c.override? `<span style="font-size:12.5px; color:var(--ink2)">AI score <b>${c.aiScore}</b> overridden by <b>${esc(c.override.by)}</b> at ${hhmm(c.override.ts)}: “${esc(c.override.reason)}”</span>` : `<span style="font-size:12.5px; color:var(--muted)">Rule-based AI score (not yet overridden)</span>`}
+      </div>
+      <table class="bd" style="margin-top:10px;">
+        ${parts.map(p=>`<tr><td>${esc(p[0])}</td><td>${r1(p[1])}</td></tr>`).join("")}
+        <tr class="tot"><td>AI score${raw>100?" (capped at 100)":""}</td><td>${c.aiScore}</td></tr>
+      </table>`;
+  if(c.status!=="Resolved"){
+    html += overrideOpen ? `
+      <div class="m-actions">
+        <label style="margin:0">New score</label><input type="number" id="ovrVal" min="0" max="100" value="${c.score}" style="width:90px">
+        <input type="text" id="ovrReason" placeholder="Reason (required), e.g. caller confirmed infant on site" style="flex:1; min-width:240px">
+        <button class="btn sm" onclick="applyOverride('${c.id}')">Apply override</button>
+        <button class="btn ghost sm" onclick="overrideOpen=false; renderModal()">Cancel</button>
+      </div>` : `
+      <div class="m-actions">
+        <button class="btn ghost sm" onclick="overrideOpen=true; renderModal(); document.getElementById('ovrVal').focus()">✎ Override priority</button>
+        ${c.override? `<button class="btn ghost sm" onclick="revertOverride('${c.id}')">↺ Revert to AI score</button>`:""}
+      </div>`;
+  }
+  html += `</div>`;
+
+  if(c.status==="Pending"){
+    html += `<div class="m-sec">
+      <h4>Dispatch decision</h4>
+      <div style="font-size:13px;">${rec? `Recommended: <b>${agentDisplay(rec)}</b> <span style="color:var(--muted)">· ${recReason(c)}</span>` :
+        `<span style="color:var(--warn)"><b>No vehicle is free.</b> Every vehicle is on an active task. Keep this pending, or close a finished task to free one.</span>`}</div>
+      <div class="m-actions">
+        <select id="agentSel" onchange="agentChoice['${c.id}']=this.value">
+          ${FLEET.map(f=>`<option value="${f.id}" ${busy[f.id]?"disabled":""} ${f.id===choice?"selected":""}>${f.icon} ${f.id}${busy[f.id]? " · busy on "+busy[f.id] : f.id===rec? " · recommended":""}</option>`).join("")}
+        </select>
+        <button class="btn" ${rec && !c.dupOf?"":"disabled style='opacity:.5'"} onclick="approveDispatch('${c.id}')">✔ Approve &amp; dispatch</button>
+      </div>
+      <div class="hint">${c.dupOf? "Resolve the duplicate flag above first (one click if it is a separate emergency)." : "The system only recommends. Nothing is dispatched until an officer approves."}</div>
+    </div>`;
+  } else if(c.status!=="Resolved"){
+    const next = c.status==="Dispatched"? ["Accepted","📡 Record crew acceptance"] : c.status==="Accepted"? ["In Progress","🛟 Mark crew on scene"] : !c.crewDone? ["","📝 Record crew completion report"] : null;
+    html += `<div class="m-sec">
+      <h4>Field operation</h4>
+      <div style="font-size:13px;">Assigned: <b>${agentDisplay(c.agent)}</b>${c.approvedBy? ` · approved by ${esc(c.approvedBy)}`:""}</div>
+      ${c.crewDone? `<div class="okbox" style="margin-top:10px;">📋 <b>Crew report:</b> ${esc(c.crewReport)}. Confirm the outcome below to close and free the vehicle.</div>`:""}
+      <div class="m-actions">
+        ${next? `<button class="btn ghost sm" onclick="advanceOne('${c.id}', true)">${next[1]}</button>`:""}
+        <button class="btn ghost sm" onclick="releaseVehicle('${c.id}')">↩ Release vehicle &amp; return to pending</button>
+      </div>
+      <div class="m-actions">
+        <input type="text" id="outcomeTxt" placeholder="Outcome (required to close), e.g. 6 people evacuated to relief camp" value="${c.crewDone? esc(c.crewReport):""}" style="flex:1; min-width:280px">
+        <button class="btn sm" style="background:#199e70" onclick="resolveIncident('${c.id}')">✅ Close incident</button>
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="okbox"><b>Closed.</b> ${esc(c.outcome||"Resolved")}${c.closedBy? ` · by ${esc(c.closedBy)}`:""}${c.t?.resolved? ` at ${hhmm(c.t.resolved)}`:""}</div>`;
+  }
+
+  html += `<div class="m-sec">
+      <h4>Timeline (from audit log)</h4>
+      <div class="tl">${events.length? events.map(e=>`<div><span class="tl-t">${hhmmss(e.ts)}</span><span><b>${esc(e.action)}</b> · ${esc(e.actor)}${e.detail? " · "+esc(e.detail):""}</span></div>`).join("")
+        : `<div><span style="color:var(--muted)">Seeded incident: no recorded events yet.</span></div>`}</div>
+    </div>
+  </div>`;
+  document.getElementById("modal").innerHTML = html;
+}
+
+/* ---------- officer actions ---------- */
+function getC(id){ return complaints.find(x=>x.id===id); }
+function commit(){ saveState(); refreshAll(); renderModal(); }
+function approveDispatch(id){
+  const c = getC(id); if(!c || c.status!=="Pending") return;
+  const sel = document.getElementById("agentSel"); const a = sel? sel.value : pickAgent(c);
+  const busy = busyMap(c);
+  if(c.dupOf){ toast("Resolve the duplicate flag first.", true); return; }
+  if(!a){ toast("No vehicle selected.", true); return; }
+  if(busy[a]){ toast(`${a} is already on ${busy[a]}. Choose a free vehicle.`, true); return; }
+  const rec = pickAgent(c), prev = c.status;
+  c.agent = a; c.status = "Dispatched"; c.t = c.t||{}; c.t.dispatched = Date.now(); c.approvedBy = currentAdmin;
+  log(currentAdmin, "Approved & dispatched", id, `${a} · priority ${c.score}` + (a!==rec && rec? ` · officer chose ${a} over recommended ${rec}`:""));
+  notifyStatusChange(c, prev); commit();
+  toast(`${a} dispatched to ${id}.`);
+}
+function applyOverride(id){
+  const c = getC(id); if(!c) return;
+  const v = Math.round(+document.getElementById("ovrVal").value);
+  const reason = document.getElementById("ovrReason").value.trim();
+  if(!(v>=0 && v<=100)){ toast("Score must be between 0 and 100.", true); return; }
+  if(reason.length<5){ toast("Please give a reason for the override.", true); return; }
+  if(v===c.score){ toast("That is already the current score.", true); return; }
+  const from = c.score;
+  c.score = v; c.override = {by:currentAdmin, ts:Date.now(), reason, from};
+  overrideOpen = false;
+  log(currentAdmin, "Priority override", id, `${from} → ${v} (AI ${c.aiScore}) · reason: ${reason}`);
+  commit(); toast(`${id} priority set to ${v}.`);
+}
+function revertOverride(id){
+  const c = getC(id); if(!c) return;
+  log(currentAdmin, "Override reverted", id, `${c.score} → AI ${c.aiScore}`);
+  c.score = c.aiScore; delete c.override; commit();
+}
+function linkDuplicate(id){
+  const c = getC(id); if(!c) return;
+  c.status = "Resolved"; c.outcome = `Linked as duplicate of ${c.dupOf}`; c.closedBy = currentAdmin; c.t = c.t||{}; c.t.resolved = Date.now(); c.dupResolved = "linked";
+  log(currentAdmin, "Linked as duplicate", id, `of ${c.dupOf}; closed without dispatch`);
+  notify(c, `Your report was linked to ${c.dupOf}, an incident at the same location that a rescue team is already handling.`, "🔗");
+  commit(); toast(`${id} linked to ${c.dupOf}.`);
+}
+function dismissDuplicate(id){
+  const c = getC(id); if(!c) return;
+  log(currentAdmin, "Duplicate flag dismissed", id, `not a duplicate of ${c.dupOf}`);
+  c.dupResolved = "dismissed"; c.dupOf = null; commit();
+}
+function crewReportText(c){
+  return ({rescue:`${c.people} people evacuated to a relief camp`, flood:"Residents moved to upper floors; pumping started",
+    waterlogging:"Road cleared and reopened", medical:"Patient transferred to hospital",
+    power:"Supply isolated; electricity board notified", tree:"Debris cleared; road reopened",
+    relief:`Supplies delivered to ${c.people} people`})[c.type] || "Task completed";
+}
+function advanceOne(id, byOfficer){
+  const c = getC(id); if(!c) return false;
+  if(c.status==="In Progress" && !c.crewDone){
+    c.crewDone = true; c.crewReport = crewReportText(c);
+    log(byOfficer? `${currentAdmin} (relayed from ${c.agent} crew)` : `${c.agent} crew (simulated)`, "Crew reports task complete", id, c.crewReport + " · awaiting officer closure");
+    notify(c, `The rescue crew reports your request at ${Z[c.zone].name} is complete. The command center will confirm shortly.`, "📋");
+    if(byOfficer) commit();
+    return true;
+  }
+  const next = {"Dispatched":"Accepted","Accepted":"In Progress"}[c.status]; if(!next) return false;
+  const prev = c.status; c.status = next; c.t = c.t||{};
+  c.t[next==="Accepted"?"accepted":"inprogress"] = Date.now();
+  log(byOfficer? `${currentAdmin} (relayed from ${c.agent} crew)` : `${c.agent} crew (simulated)`, next==="Accepted"? "Crew accepted task" : "Crew on scene", id, "");
+  notifyStatusChange(c, prev);
+  if(byOfficer) commit();
+  return true;
+}
+function releaseVehicle(id){
+  const c = getC(id); if(!c) return;
+  log(currentAdmin, "Vehicle released", id, `${c.agent} freed; incident back to pending`);
+  c.agent = null; c.status = "Pending"; c.crewDone = false; commit();
+}
+function resolveIncident(id){
+  const c = getC(id); if(!c) return;
+  const out = (document.getElementById("outcomeTxt")?.value||"").trim();
+  if(out.length<4){ toast("Enter an outcome before closing the incident.", true); return; }
+  const prev = c.status;
+  c.status = "Resolved"; c.outcome = out; c.closedBy = currentAdmin; c.t = c.t||{}; c.t.resolved = Date.now();
+  log(currentAdmin, "Incident closed", id, `${c.agent||"no vehicle"} released · outcome: ${out}`);
+  notifyStatusChange(c, prev); commit(); toast(`${id} closed.`);
+}
+
+/* ---------- audit tab ---------- */
+function renderAudit(){
+  const b = document.getElementById("auditBody"); if(!b) return;
+  b.innerHTML = auditLog.slice().reverse().map(e=>`<tr>
+    <td class="mono" style="color:var(--muted)">${hhmmss(e.ts)}</td>
+    <td>${esc(e.actor)}</td><td><b>${esc(e.action)}</b></td>
+    <td class="mono">${e.cid && e.cid!=="—"? `<a href="#" style="color:#6db3ff" onclick="openIncident('${esc(e.cid)}');return false;">${esc(e.cid)}</a>`:"—"}</td>
+    <td style="color:var(--ink2)">${esc(e.detail)}</td></tr>`).join("") ||
+    `<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:24px;">No events yet.</td></tr>`;
+}
+function exportAudit(){
+  const q = v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const csv = ["time,actor,action,incident,detail", ...auditLog.map(e=>[new Date(e.ts).toISOString(), e.actor, e.action, e.cid, e.detail].map(q).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download = "aquila_audit_log.csv"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- simulation controls ---------- */
+function advanceField(manual){
+  const ids = complaints.filter(c=>c.status==="Dispatched"||c.status==="Accepted"||(c.status==="In Progress"&&!c.crewDone)).map(c=>c.id);
+  let n = 0; ids.forEach(id=>{ if(advanceOne(id, false)) n++; });
+  if(n){ saveState(); refreshAll(); }
+  if(manual) toast(n? `${n} field crew update(s) simulated.` : "No crews are currently en route.");
+}
+const SCENARIO = [
+  ["velachery","rescue",4,8,4,"Family stranded on first floor near Velachery lake, water still rising."],
+  ["pallikaranai","flood",3,10,3,"Marsh overflow entering houses on 200 Feet Road."],
+  ["perungudi","flood",3,6,3,"Water entering ground-floor homes near Perungudi lake."],
+  ["tambaram","flood",3,15,2,"Knee-deep water across Tambaram West, families moving upstairs."],
+  ["mudichur","rescue",4,5,4,"Elderly couple trapped, cannot climb to terrace."],
+  ["madipakkam","relief",2,30,1,"30 families in Ram Nagar need drinking water and food."],
+  ["velachery","rescue",4,8,4,"Same building near Velachery lake, neighbour calling for family stuck on first floor."],
+  ["sholinganallur","waterlogging",2,4,2,"OMR service road blocked, vehicles stranded."],
+  ["saidapet","medical",4,1,2,"Pregnant woman in labour needs hospital transfer."],
+  ["chromepet","tree",2,3,0,"Large tree fell on a parked car on GST Road."],
+  ["adyar","flood",3,6,3,"Adyar river water entering Kotturpuram homes."],
+  ["guindy","power",3,12,1,"Live wire fallen into standing water near Guindy junction."],
+  ["tnagar","waterlogging",1,2,1,"Usman Road subway waterlogged."],
+  ["porur","flood",2,5,2,"Porur lake overflow reaching nearby streets."],
+  ["pallikaranai","flood",3,9,3,"Water entering homes on 200 Feet Road, caller says neighbours already reported."],
+  ["thiruvanmiyur","relief",2,25,1,"Relief camp at school needs food packets for 25 people."],
+  ["tambaram","rescue",4,3,3,"Three people trapped in a ground-floor house in Mudichur Road."],
+  ["egmore","medical",3,1,1,"Diabetic patient needs insulin, roads waterlogged."],
+];
+const SC_NAMES = ["Priya R","Mohan K","Asha V","Ravi S","Nirmala D","Senthil P","Kavya M","Balaji T","Hema L","Imran A","Deepa J","Gokul R","Revathi S","Aravind N","Bhavani K","Manoj P","Sangeetha V","Farhan M"];
+let scenarioTimer = null;
+function runScenario(){
+  if(scenarioTimer) return;
+  const btn = document.getElementById("scenarioBtn"), st = document.getElementById("simStatus");
+  let i = 0; btn.disabled = true; btn.style.opacity = .6;
+  log(currentAdmin||"System", "Scenario started", "—", `Michaung-style scenario, ${SCENARIO.length} scripted reports`);
+  scenarioTimer = setInterval(()=>{
+    const [zone,type,severity,people,depth,desc] = SCENARIO[i];
+    addReport({zone,type,severity,people,depth,desc, name:SC_NAMES[i], phone:"9"+String(800000000+i*7919).slice(0,9)}, "scenario");
+    i++; st.textContent = `Scenario running: ${i}/${SCENARIO.length} reports received`;
+    refreshAll();
+    if(i>=SCENARIO.length){
+      clearInterval(scenarioTimer); scenarioTimer = null; btn.disabled = false; btn.style.opacity = 1;
+      st.textContent = `Scenario complete: ${SCENARIO.length} reports. Review the AI Priority Queue and approve dispatches.`;
+      log(currentAdmin||"System", "Scenario finished", "—", `${SCENARIO.length} reports received`);
+      toast("Scenario complete. Review and approve the queue.");
+    }
+  }, 1500);
+}
+setInterval(()=>{ const t = document.getElementById("autoAdvance"); if(t && t.checked) advanceField(false); }, 10000);
 
 /* ---------- SVG bar charts (dataviz spec: thin marks, rounded data-end, hairline grid) ---------- */
 function barChartH(hostId, data, color, unit){
@@ -1292,13 +1507,13 @@ function barChartH(hostId, data, color, unit){
   let s = `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto;">`;
   [0.25,0.5,0.75,1].forEach(f=>{
     const x = padL + (W-padL-padR)*f;
-    s += `<line x1="${x}" y1="6" x2="${x}" y2="${H-8}" stroke="rgba(148,163,184,.12)" stroke-width="1"/>`;
+    s += `<line x1="${x}" y1="6" x2="${x}" y2="${H-8}" stroke="#2c2c2a" stroke-width="1"/>`;
   });
   data.forEach((d,i)=>{
     const y = 10+i*rowH, w = Math.max(3,(W-padL-padR)*(d.v/max));
-    s += `<text x="${padL-10}" y="${y+12}" text-anchor="end" font-size="11.5" fill="#a9b4c4" font-family="Inter, sans-serif">${d.label}</text>`;
+    s += `<text x="${padL-10}" y="${y+12}" text-anchor="end" font-size="11.5" fill="#c3c2b7">${d.label}</text>`;
     s += `<path d="M${padL},${y} h${Math.max(0,w-4)} a4,4 0 0 1 4,4 v8 a4,4 0 0 1 -4,4 h-${Math.max(0,w-4)} z" fill="${d.color||color}" class="bar-mark" data-tip="${d.label}: ${d.v}${unit||""}"/>`;
-    s += `<text x="${padL+w+8}" y="${y+12}" font-size="11.5" fill="#e8edf4" font-weight="600" font-family="Inter, sans-serif">${d.v}${unit||""}</text>`;
+    s += `<text x="${padL+w+8}" y="${y+12}" font-size="11.5" fill="#f0efec" font-weight="700" class="mono">${d.v}${unit||""}</text>`;
   });
   s += `</svg>`;
   host.innerHTML = s;
@@ -1314,15 +1529,15 @@ function lineChart(hostId, data, color){
   const steps = 4;
   for(let g=0; g<=steps; g++){
     const vy = y(max*g/steps);
-    s += `<line x1="${padL}" y1="${vy}" x2="${W-padR}" y2="${vy}" stroke="rgba(148,163,184,.12)" stroke-width="1"/>`;
-    s += `<text x="${padL-8}" y="${vy+4}" text-anchor="end" font-size="10.5" fill="#6c788b" font-family="Inter, sans-serif">${Math.round(max*g/steps)}</text>`;
+    s += `<line x1="${padL}" y1="${vy}" x2="${W-padR}" y2="${vy}" stroke="#2c2c2a" stroke-width="1"/>`;
+    s += `<text x="${padL-8}" y="${vy+4}" text-anchor="end" font-size="10.5" fill="#898781" class="mono">${Math.round(max*g/steps)}</text>`;
   }
   const pts = data.map((d,i)=>[x(i), y(d.v)]);
   s += `<path d="M${pts.map(p=>p.join(",")).join(" L ")}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
   s += `<path d="M${pts.map(p=>p.join(",")).join(" L ")} L ${x(data.length-1)},${H-padB} L ${padL},${H-padB} Z" fill="${color}" opacity="0.08"/>`;
   data.forEach((d,i)=>{
-    s += `<circle cx="${x(i)}" cy="${y(d.v)}" r="4" fill="${color}" stroke="#0f1622" stroke-width="2" class="bar-mark" data-tip="${d.label}: ${d.v} reports"/>`;
-    if(i%2===0) s += `<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="10.5" fill="#6c788b" font-family="Inter, sans-serif">${d.label}</text>`;
+    s += `<circle cx="${x(i)}" cy="${y(d.v)}" r="4" fill="${color}" stroke="#161b22" stroke-width="2" class="bar-mark" data-tip="${d.label}: ${d.v} reports"/>`;
+    if(i%2===0) s += `<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="10.5" fill="#898781">${d.label}</text>`;
   });
   s += `</svg>`;
   host.innerHTML = s;
@@ -1348,24 +1563,24 @@ function renderAnalytics(){
   complaints.forEach(c=>{ zc[c.zone]=(zc[c.zone]||0)+1; });
   const zoneData = Object.entries(zc).map(([z,v])=>({label:Z[z]?.name||z, v}))
     .sort((a,b)=>b.v-a.v).slice(0,10);
-  barChartH("chartZone", zoneData, "#4f8cff");
+  barChartH("chartZone", zoneData, "#3987e5");
   // by type
   const tc = {};
   complaints.forEach(c=>{ tc[c.type]=(tc[c.type]||0)+1; });
   const typeData = Object.entries(tc).map(([t,v])=>({label:TYPE_META[t].label, v})).sort((a,b)=>b.v-a.v);
-  barChartH("chartType", Object.entries(tc).map(([t,v])=>({label:TYPE_META[t].label, v, color:TYPE_META[t].col})).sort((a,b)=>b.v-a.v), "#22b38a");
+  barChartH("chartType", typeData, "#199e70");
   // timeline (12 hourly buckets)
   const now = Date.now(), buckets = Array.from({length:12},(_,i)=>({label:new Date(now-(11-i)*3600e3).toLocaleTimeString("en-IN",{hour:"2-digit",hour12:true}), v:0}));
   complaints.forEach(c=>{
     const age = Math.floor((now - c.ts)/3600e3);
     if(age>=0 && age<12) buckets[11-age].v++;
   });
-  lineChart("chartTimeline", buckets, "#4f8cff");
+  lineChart("chartTimeline", buckets, "#3987e5");
 }
 
 function renderHistory(){
   document.getElementById("dsGrid").innerHTML = DISASTERS.map(d=>`
-    <div class="ds-card" style="--dc:${d.col};">
+    <div class="ds-card" style="border-left-color:${d.col};">
       <div class="ds-yr">${d.yr}</div><h4>${d.name}</h4>
       <p>${d.desc}</p>
       <div class="ds-stats">${d.stats.map(([b,s])=>`<div><b>${b}</b><span>${s}</span></div>`).join("")}</div>
@@ -1391,27 +1606,22 @@ document.querySelectorAll(".tab").forEach(t=>{
 
 /* ---------- refresh everything ---------- */
 function refreshAll(){
-  setTicker(); renderKPIs(); renderRegister(); renderFleet(); renderQueue();
+  setTicker(); renderKPIs(); renderRegister(); renderFleet(); renderQueue(); renderAudit();
   renderAnalytics(); renderHistory(); renderCitizen(); renderIncidents(); updateAgentTargets(); renderNotifs();
+  if(openId && !modalBusy()) renderModal();
 }
 
 /* ---------- boot ---------- */
+loadAudit();
 loadState();
 loadNotifs();
 initCitizenForm();
-// populate zone filter
 document.getElementById("filterZone").innerHTML = `<option value="">All zones</option>` +
   ZONES.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(z=>`<option value="${z.id}">${z.name}</option>`).join("");
 buildMap("citizenMapWrap", false);
 buildMap("adminMapWrap", true);
 refreshAll();
 show("landing");
-
-/* light live-simulation: occasional status progression */
-setInterval(()=>{
-  const c = complaints.find(x=>x.status==="Dispatched" && Math.random()<0.35);
-  if(c){ const prev=c.status; c.status="In Progress"; notifyStatusChange(c, prev); saveState(); refreshAll(); }
-}, 25000);
 </script>
 </body>
 </html>
