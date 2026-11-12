@@ -600,6 +600,33 @@ select option{background:#061a2c !important;}
 
 .pr-badge, .badge-st, .flag, td.mono{white-space:nowrap;}
 #tab-register td{vertical-align:middle;}
+
+/* ================= NARROW SCREENS (kept last so it wins over the overrides above) ================= */
+@media (max-width:900px){
+  .app{grid-template-columns:1fr !important;}
+  .sidenav{position:static; height:auto; overflow:visible; flex-direction:row; flex-wrap:wrap; align-items:stretch; gap:6px;
+    padding:10px 12px; border-right:none; border-bottom:1px solid var(--border); z-index:2;}
+  .sn-sec, .sn-foot{display:none !important;}
+  .sn-item{width:auto; flex:1 1 auto; justify-content:center; gap:8px; padding:8px 12px; font-size:13px; white-space:nowrap;}
+  .sn-item span{flex:none;}
+  .sn-item.active::before{display:none;}
+  .sidenav .simbar{flex:1 1 100%; flex-direction:row !important; flex-wrap:wrap; align-items:center !important; margin:4px 0 0 !important; padding:10px !important;}
+  .sidenav .simbar .btn{width:auto; flex:1 1 160px;}
+  .sidenav #simStatus{flex:1 1 100%;}
+  .wrap.main{padding:14px !important;}
+  .topbar{flex-wrap:wrap; gap:8px 10px; padding:10px 14px !important;}
+  .topbar .livechip{display:none;}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr)) !important;}
+}
+@media (max-width:560px){
+  .topbar{position:relative;}   /* don't pin a wrapped multi-line header on phones */
+  .topbar .clock[data-clock]{display:none;}
+  .notif-panel{top:12px; right:8px; left:8px; width:auto; max-height:70vh;}
+  .sn-item{flex:1 1 calc(50% - 6px); padding:8px 10px;}
+  .sn-item svg{width:16px; height:16px;}
+  .ticker .tk-label{display:none;}
+  .rolechip{font-size:10px !important;}
+}
 </style>
 </head>
 <body>
