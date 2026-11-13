@@ -463,9 +463,19 @@ function showPage(scope, page){
   document.querySelectorAll(`.sn-item[data-scope="${scope}"]`).forEach(x=>x.classList.toggle("active", x.dataset.page===page));
   const cls = scope==="admin"? ".apage" : ".cpage", pre = scope==="admin"? "tab-" : "cp-";
   document.querySelectorAll(cls).forEach(p=>p.classList.add("hidden"));
-  document.getElementById(pre+page).classList.remove("hidden");
+  const pane = document.getElementById(pre+page);
+  pane.classList.remove("hidden");
   if(scope==="admin" && page==="officers" && SB_ON) sbLoadOfficers();
-  window.scrollTo({top:0, behavior:"smooth"});
+  /* on narrow screens the nav sits above the content, so the chosen page can start below the fold */
+  const nav = document.querySelector(`.sn-item[data-scope="${scope}"]`)?.closest(".sidenav");
+  const stacked = nav && nav.getBoundingClientRect().right <= pane.getBoundingClientRect().left + 1 ? false : !!nav;
+  if(stacked){
+    const bar = document.querySelector(".topbar");
+    const offset = bar && getComputedStyle(bar).position==="sticky" ? bar.offsetHeight : 0;
+    window.scrollTo({top: Math.max(0, pane.getBoundingClientRect().top + window.scrollY - offset - 12), behavior:"smooth"});
+  }else{
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
 }
 function renderNavBadges(){
   const set = (id, v, warn)=>{ const e = document.getElementById("sb-"+id); if(!e) return; e.textContent = v; e.classList.toggle("warn", !!warn); e.style.display = (v===""||v===0)? "none":""; };

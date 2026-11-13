@@ -7,13 +7,13 @@ let broadcasts = [];   // newest first: {id, zone|"", tpl, texts:{en,ta,hi}, ts,
 
 const BCAST_TPL = {
   flood_evac: {label:"🌊 Flood — move to shelter", t:{
-    en: z=>`${z}: Water is rising. Move to higher ground now. Relief shelter open at the ${z} Corporation school. Do not walk through moving water.`,
-    ta: z=>`${z}: தண்ணீர் உயர்கிறது. உடனே உயரமான இடத்திற்கு செல்லுங்கள். ${z} மாநகராட்சி பள்ளியில் நிவாரண முகாம் திறக்கப்பட்டுள்ளது. ஓடும் தண்ணீரில் நடக்க வேண்டாம்.`,
-    hi: z=>`${z}: पानी बढ़ रहा है। तुरंत ऊँची जगह जाएँ। ${z} निगम स्कूल में राहत शिविर खुला है। बहते पानी में न चलें.`}},
+    en: (z,p)=>`${z}: Water is rising. Move to higher ground now. Relief shelter open at ${p? `the ${p}` : "your nearest"} Corporation school. Do not walk through moving water.`,
+    ta: (z,p)=>`${z}: தண்ணீர் உயர்கிறது. உடனே உயரமான இடத்திற்கு செல்லுங்கள். ${p || "அருகிலுள்ள"} மாநகராட்சி பள்ளியில் நிவாரண முகாம் திறக்கப்பட்டுள்ளது. ஓடும் தண்ணீரில் நடக்க வேண்டாம்.`,
+    hi: (z,p)=>`${z}: पानी बढ़ रहा है। तुरंत ऊँची जगह जाएँ। ${p || "नज़दीकी"} निगम स्कूल में राहत शिविर खुला है। बहते पानी में न चलें.`}},
   heat_adv: {label:"☀️ Heatwave advisory", t:{
-    en: z=>`${z}: Severe heat until 5 pm. Stay indoors 12–4, drink water every hour, check on the elderly. Cooling centre open at the ${z} community hall.`,
-    ta: z=>`${z}: மாலை 5 வரை கடும் வெப்பம். மதியம் 12–4 வெளியே வர வேண்டாம், மணிக்கொருமுறை தண்ணீர் குடியுங்கள், முதியவர்களை கவனியுங்கள். ${z} சமுதாய கூடத்தில் குளிர்சாதன மையம் உள்ளது.`,
-    hi: z=>`${z}: शाम 5 बजे तक भीषण गर्मी। 12–4 घर के अंदर रहें, हर घंटे पानी पिएँ, बुज़ुर्गों का ध्यान रखें। ${z} सामुदायिक भवन में कूलिंग सेंटर खुला है.`}},
+    en: (z,p)=>`${z}: Severe heat until 5 pm. Stay indoors 12–4, drink water every hour, check on the elderly. Cooling centre open at ${p? `the ${p}` : "your nearest"} community hall.`,
+    ta: (z,p)=>`${z}: மாலை 5 வரை கடும் வெப்பம். மதியம் 12–4 வெளியே வர வேண்டாம், மணிக்கொருமுறை தண்ணீர் குடியுங்கள், முதியவர்களை கவனியுங்கள். ${p || "அருகிலுள்ள"} சமுதாய கூடத்தில் குளிர்சாதன மையம் உள்ளது.`,
+    hi: (z,p)=>`${z}: शाम 5 बजे तक भीषण गर्मी। 12–4 घर के अंदर रहें, हर घंटे पानी पिएँ, बुज़ुर्गों का ध्यान रखें। ${p || "नज़दीकी"} सामुदायिक भवन में कूलिंग सेंटर खुला है.`}},
   water_dist: {label:"🚰 Water tanker timing", t:{
     en: z=>`${z}: Water tanker will reach the main bus stop at 4 pm today. One pot per family; please queue in the shade.`,
     ta: z=>`${z}: இன்று மாலை 4 மணிக்கு முக்கிய பேருந்து நிறுத்தத்திற்கு தண்ணீர் லாரி வரும். குடும்பத்திற்கு ஒரு குடம்; நிழலில் வரிசையில் நிற்கவும்.`,
@@ -21,27 +21,34 @@ const BCAST_TPL = {
 };
 
 function bcastTexts(tpl, zoneId, custom){
-  const zn = zoneId ? (Z[zoneId]?.name || zoneId) : "All Chennai zones";
-  if(tpl === "custom"){ const c = (custom||"").trim(); return {en:`${zn}: ${c}`, ta:`${zn}: ${c}`, hi:`${zn}: ${c}`}; }
+  const name = zoneId ? (Z[zoneId]?.name || zoneId) : "";
+  const zn = L => name || {en:"All Chennai zones", ta:"சென்னை அனைத்து மண்டலங்கள்", hi:"चेन्नई के सभी ज़ोन"}[L];
+  if(tpl === "custom"){ const c = (custom||"").trim(); return {en:`${zn("en")}: ${c}`, ta:`${zn("ta")}: ${c}`, hi:`${zn("hi")}: ${c}`}; }
   const T = BCAST_TPL[tpl]; if(!T) return null;
-  return {en:T.t.en(zn), ta:T.t.ta(zn), hi:T.t.hi(zn)};
+  /* name is empty for an all-zones broadcast: there is no single venue to point people to */
+  return {en:T.t.en(zn("en"), name), ta:T.t.ta(zn("ta"), name), hi:T.t.hi(zn("hi"), name)};
 }
 function bcastText(b){ const L = typeof protoLang==="function" ? protoLang() : "en"; return (b.texts && (b.texts[L] || b.texts.en)) || ""; }
 
 /* ---------- storage: Supabase table when available, else this browser ---------- */
-function loadBroadcasts(){
-  if(SB_ON && sb){
-    sb.from("broadcasts").select("*").order("ts",{ascending:false}).limit(20)
-      .then(({data,error})=>{ if(!error && data){ broadcasts = data.map(r=>({id:r.id, zone:r.zone||"", tpl:r.tpl, texts:r.texts, ts:+new Date(r.ts), by:r.by})); paintBroadcasts(); } });
-    try{
-      sb.channel("bcast").on("postgres_changes",{event:"INSERT",schema:"public",table:"broadcasts"},(p)=>{
-        const r = p.new; broadcasts.unshift({id:r.id, zone:r.zone||"", tpl:r.tpl, texts:r.texts, ts:+new Date(r.ts), by:r.by});
-        paintBroadcasts(); toast("📢 " + bcastText(broadcasts[0]).slice(0,80) + "…");
-      }).subscribe();
-    }catch(e){}
-  }else{
+const bcRow = r => ({id:r.id, zone:r.zone||"", tpl:r.tpl, texts:r.texts, ts:+new Date(r.ts), by:r.by});
+async function loadBroadcasts(){
+  if(!SB_ON){
     try{ broadcasts = JSON.parse(localStorage.getItem("aquila_broadcasts_v1")||"[]"); }catch(e){ broadcasts = []; }
+    return;
   }
+  /* Supabase mode: the shared table is the only source; wait for the client to finish loading */
+  const client = await sbReady; if(!client) return;
+  const {data, error} = await client.from("broadcasts").select("*").order("ts",{ascending:false}).limit(20);
+  if(!error && data){ broadcasts = data.map(bcRow); paintBroadcasts(); }
+  try{
+    client.channel("bcast").on("postgres_changes",{event:"INSERT",schema:"public",table:"broadcasts"},(p)=>{
+      const b = bcRow(p.new);
+      if(broadcasts.some(x=>x.id===b.id)) return;
+      broadcasts.unshift(b); paintBroadcasts();
+      toast("📢 " + bcastText(b).slice(0,80) + "…");
+    }).subscribe();
+  }catch(e){}
 }
 function saveBroadcastsLocal(){ try{ localStorage.setItem("aquila_broadcasts_v1", JSON.stringify(broadcasts.slice(0,20))); }catch(e){} }
 
@@ -52,10 +59,12 @@ async function sendBroadcast(){
   if(tpl==="custom" && !custom.trim()){ toast("Type the custom message first.", true); return; }
   const texts = bcastTexts(tpl, zone, custom); if(!texts) return;
   const b = {id:"BC-"+Date.now().toString(36), zone, tpl, texts, ts:Date.now(), by:currentAdmin||"Officer"};
-  if(SB_ON && sb){
-    const {error} = await sb.from("broadcasts").insert({zone:zone||null, tpl, texts, by:b.by});
+  if(SB_ON){
+    const client = await sbReady; if(!client){ toast("Broadcast service unreachable.", true); return; }
+    const {data, error} = await client.from("broadcasts").insert({zone:zone||null, tpl, texts, by:b.by}).select().single();
     if(error){ toast("Broadcast failed: "+error.message, true); return; }
-    /* the realtime INSERT event adds it to the list */
+    /* show it here at once; the realtime echo is de-duplicated by id */
+    if(data && !broadcasts.some(x=>x.id===data.id)) broadcasts.unshift(bcRow(data));
   }else{
     broadcasts.unshift(b); saveBroadcastsLocal();
   }
